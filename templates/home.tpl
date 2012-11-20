@@ -1,11 +1,21 @@
 {% extends "base.tpl" %}
 
 {% block main %}
-<h2>Expenses in datastore</h2>
+<h2>Unassigned expenses</h2>
+<form action="" method="post">
 {% for expense in expenses %}
-<p>{{ expense.date }}: {{ expense.name }}<br />
-${{ expense.amount }}, {{ expense.frequency }}</p>
+<input type="checkbox" name="expense" value="{{ expense.key }}">{{ expense.date }}: {{ expense.name }}<br />
+${{ expense.amount }}, {{ expense.frequency }}</input>
+<br />
 {% endfor %}
+<br /><br />
+<select name="paycheck">
+	{% for paycheck in paychecks %}
+	<option value="{{ paycheck.key }}">{{ paycheck.date }}</option>
+	{% endfor %}
+<input type="submit" value="Submit">
+</form>
+<br /><br />
 {% endblock main %}
 
 {% block form %}
@@ -16,6 +26,6 @@ ${{ expense.amount }}, {{ expense.frequency }}</p>
   Amount: <input type="text" name="amount"><br />
   Frequency: <input type="text" name="freq"><br />
   Category: <input type="text" name="category"><br />
-  <input type="submit" value="send">
+  <input type="submit" value="Submit">
 </form>
 {% endblock form %}

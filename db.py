@@ -3,14 +3,16 @@
 from google.appengine.ext import db
 
 class Transaction(db.Model):
-	date = db.StringProperty()
+	date = db.DateProperty()
 	name = db.StringProperty()
 	description = db.TextProperty()
 	amount = db.FloatProperty()
 	account = db.StringProperty()
+	paycheck = db.ReferenceProperty(db.Key)
 	frequency = db.StringProperty(
 	  choices = set(['Core', 'Regular', 'One-Time']),
 	  default = 'One-Time')
+	recurring_date = db.DateProperty()
 	verified = db.BooleanProperty()
 
 class Expense(Transaction):
@@ -29,3 +31,5 @@ class Paycheck(db.Model):
 	ins_deductions = db.ListProperty(db.Key)
 	deposits = db.ListProperty(db.Key)
 	expenses = db.ListProperty(db.Key)
+	current = db.BooleanProperty()
+	closed = db.BooleanProperty()
