@@ -4,14 +4,14 @@
 <h2>Unassigned expenses</h2>
 <form action="" method="post">
 {% for expense in expenses %}
-<input type="checkbox" name="expense" value="{{ expense.key }}">{{ expense.date }}: {{ expense.name }}<br />
+<input type="checkbox" name="expense{{ forloop.counter }}" value="{{ expense.key }}">{{ expense.date }}: {{ expense.name }}<br />
 ${{ expense.amount }}, {{ expense.frequency }}</input>
 <br />
 {% endfor %}
 <br /><br />
 <select name="paycheck">
 	{% for paycheck in paychecks %}
-	<option value="{{ paycheck.key }}">{{ paycheck.date }}</option>
+	<option name="paycheck" value="{{ paycheck.key }}">{{ paycheck.date }}</option>
 	{% endfor %}
 <input type="submit" value="Submit">
 </form>

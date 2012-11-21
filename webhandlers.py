@@ -24,18 +24,31 @@ class MainPage(webapp2.RequestHandler):
 		self.response.out.write(template.render(path, template_values))
 
 	def post(self):
-		expense = mydb.Expense()
-		
-		expense.date = DateFromString(self.request.get('date'))
-		expense.name = self.request.get('name')
-		expense.description = self.request.get('description')
-		expense.amount = float(self.request.get('amount'))
-		expense.frequency = self.request.get('freq')
-		expense.e_category = self.request.get('category')
-		
-		expense.put()
-		
 		u_expenses = db.GqlQuery('SELECT * FROM Expense WHERE paycheck = NULL ORDER BY date')
+		if self.request.get('description'): # if description is present, assume adding a new expense
+		  expense = mydb.Expense()
+		  expense.date = DateFromString(self.request.get('date'))
+		  expense.name = self.request.get('name')
+		  expense.description = self.request.get('description')
+		  expense.amount = float(self.request.get('amount'))
+		  expense.frequency = self.request.get('freq')
+		  expense.e_category = self.request.get('category')
+		  expense.put()
+		else:
+			p_key = db.Key(self.request.get('paycheck'))
+			paycheck = db.get(p_key)
+			for index, expense in enumerate(u_expenses):
+				e_label = 'expense' + str(index + 1)
+				if self.request.get(e_label):
+					e_key = db.Key(self.request.get(e_label))
+					paycheck.expenses.append(e_key)
+					paycheck.put()
+					print e_label + ' appended'
+					expense = db.get(self.request.get(e_label)) # Not the right way to get existing entity by key
+					expense.paycheck = p_key
+					expense.put()
+					print 'Paycheck added to expense'
+
 		a_paychecks = db.GqlQuery('SELECT * FROM Paycheck WHERE closed = FALSE ORDER BY date')
 		
 		template_values = { 'expenses': u_expenses,

@@ -8,7 +8,7 @@ class Transaction(db.Model):
 	description = db.TextProperty()
 	amount = db.FloatProperty()
 	account = db.StringProperty()
-	paycheck = db.ReferenceProperty(db.Key)
+	paycheck = db.ReferenceProperty()
 	frequency = db.StringProperty(
 	  choices = set(['Core', 'Regular', 'One-Time']),
 	  default = 'One-Time')
