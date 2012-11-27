@@ -19,3 +19,9 @@ indexes:
   properties:
   - name: closed
   - name: date
+
+- kind: Paycheck
+  properties:
+  - name: closed
+  - name: date
+    direction: desc

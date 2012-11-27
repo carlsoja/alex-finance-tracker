@@ -5,5 +5,6 @@ import webhandlers
 
 application = webapp2.WSGIApplication([
     ('/', webhandlers.MainPage),
-    ('/paycheck', webhandlers.CreatePaycheck)
+    ('/paycheck', webhandlers.CreatePaycheck),
+    ('/account', webhandlers.CreateAccount)
     ], debug=True)
