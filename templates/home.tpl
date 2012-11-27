@@ -11,7 +11,7 @@
 {% if paychecks %}
 <h2>Active Paychecks</h2>
 {% for paycheck in paychecks %}
-<p><strong>{{ paycheck.date }}</strong> - Gross: ${{ paycheck.gross|floatformat:"2" }}, Current Sub-Total: ${{ paycheck.final_balance|floatformat:"2" }}</p>
+<p><strong><a href="/paycheck/detail?key={{ paycheck.key }}">{{ paycheck.date }}</a></strong> - Gross: ${{ paycheck.gross|floatformat:"2" }}, Current Sub-Total: ${{ paycheck.final_balance|floatformat:"2" }}</p>
 {% endfor %}
 {% endif %}
 <h2>Unassigned expenses</h2>

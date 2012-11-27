@@ -103,7 +103,7 @@ class CreatePaycheck(webapp2.RequestHandler):
 		
 		paycheck.date = DateFromString(self.request.get('date'))
 		paycheck.gross = float(self.request.get('gross'))
-		paycheck.after_deduction_pay = paycheck.gross
+		paycheck.after_deduction_balance = paycheck.gross
 		paycheck.after_deposit_balance = paycheck.gross
 		paycheck.final_balance = paycheck.gross
 		if self.request.get('current') == 'True':
@@ -123,6 +123,32 @@ class CreatePaycheck(webapp2.RequestHandler):
 		template_values = { 'paychecks': q }
 		path = os.path.join(os.path.dirname(__file__), 'templates/paycheck.tpl')
 		self.response.out.write(template.render(path, template_values))
+
+class PaycheckDetail(webapp2.RequestHandler):
+  def get(self, params):
+    p_key = self.request.get('key')
+    logging.info(p_key)
+    paycheck = db.get(p_key)
+    taxes = []
+    for tax_key in paycheck.taxes:
+      taxes.append(db.get(tax_key))
+    deductions = []
+    for deduct_key in paycheck.deductions:
+      deductions.append(db.get(deduct_key))
+    deposits = []
+    for deposit_key in paycheck.deposits:
+      deposits.append(db.get(deposit_key))
+    expenses = []
+    for expense_key in paycheck.expenses:
+      expenses.append(db.get(expense_key))
+    
+    template_values = { 'paycheck': paycheck,
+                        'taxes': taxes,
+                        'deductions': deductions,
+                        'deposits': deposits,
+                        'expenses': expenses }
+    path = os.path.join(os.path.dirname(__file__), 'templates/paycheckdetail.tpl')
+    self.response.out.write(template.render(path, template_values))
 
 class CreateAccount(webapp2.RequestHandler):
 	def get(self):
