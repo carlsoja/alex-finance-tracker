@@ -125,30 +125,55 @@ class CreatePaycheck(webapp2.RequestHandler):
 		self.response.out.write(template.render(path, template_values))
 
 class PaycheckDetail(webapp2.RequestHandler):
-  def get(self, params):
-    p_key = self.request.get('key')
-    logging.info(p_key)
-    paycheck = db.get(p_key)
+  def _Render(self, paycheck):
     taxes = []
+    tax_total = 0
     for tax_key in paycheck.taxes:
       taxes.append(db.get(tax_key))
+      tax_total += db.get(tax_key).amount
     deductions = []
+    deductions_total = 0
     for deduct_key in paycheck.deductions:
       deductions.append(db.get(deduct_key))
+      deductions_total += db.get(deduct_key).amount
     deposits = []
+    deposits_total = 0
     for deposit_key in paycheck.deposits:
       deposits.append(db.get(deposit_key))
+      deposits_total += db.get(deposit_key).amount
     expenses = []
+    expenses_total = 0
     for expense_key in paycheck.expenses:
       expenses.append(db.get(expense_key))
+      expenses_total += db.get(expense_key).amount
     
     template_values = { 'paycheck': paycheck,
                         'taxes': taxes,
+                        'tax_total': tax_total,
                         'deductions': deductions,
+                        'deductions_total': deductions_total,
                         'deposits': deposits,
-                        'expenses': expenses }
+                        'deposits_total': deposits_total,
+                        'expenses': expenses,
+                        'expenses_total': expenses_total }
     path = os.path.join(os.path.dirname(__file__), 'templates/paycheckdetail.tpl')
     self.response.out.write(template.render(path, template_values))
+  
+  def get(self, params):
+    path = self.request.path
+    logging.info(path)
+    p_key = path.split('/')[-1]
+    paycheck = db.get(p_key)
+    
+    self._Render(paycheck)
+  
+  def post(self, params):
+    path = self.request.path
+    logging.info(path)
+    p_key = path.split('/')[-1]
+    paycheck = db.get(p_key)
+    
+    self._Render(paycheck)
 
 class CreateAccount(webapp2.RequestHandler):
 	def get(self):

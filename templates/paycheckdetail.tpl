@@ -13,11 +13,11 @@
 	<li>No taxes entered</li>
 	{% endif %}
 </ul>
-<form action="" method="post">
+<p><strong>Total taxes:</strong> ${{ tax_total|floatformat:"2" }}</p>
+<form>
   Name: <input type="text" name="tax-name"><br />
   Description: <input type="text" name="tax-description"><br />
   Amount: <input type="text" name="tax-amount">
-</form>
 <p>Deductions:</p>
 <ul>
   {% if deductions %}
@@ -28,12 +28,11 @@
 	<li>No deductions entered</li>
 	{% endif %}
 </ul>
-<form action="" method="post">
+<p><strong>Total deductions:</strong> ${{ deductions_total|floatformat:"2" }}</p>
   Name: <input type="text" name="deduction-name"><br />
   Description: <input type="text" name="deduction-description"><br />
   Amount: <input type="text" name="deduction-amount"><br />
   Category: <input type="text" name="deduction-category">
-</form>
 <p><strong>AFTER DEDUCTIONS</strong>: ${{ paycheck.after_deduction_balance|floatformat:"2" }}</p>
 <p>Deposits:</p>
 <ul>
@@ -45,12 +44,11 @@
 	<li>No deposits entered</li>
 	{% endif %}
 </ul>
-<form action="" method="post">
+<p><strong>Total deposits:</strong> ${{ deposits_total|floatformat:"2" }}</p>
   Name: <input type="text" name="deposit-name"><br />
   Description: <input type="text" name="deposit-description"><br />
   Amount: <input type="text" name="deposit-amount"><br />
   Category: <input type="text" name="deposit-category">
-</form>
 <p><strong>AFTER DEPOSITS</strong>: ${{ paycheck.after_deposit_balance|floatformat:"2" }}</p>
 <p>Expenses:</p>
 <ul>
@@ -62,13 +60,13 @@
 	<li>No expenses entered</li>
 	{% endif %}
 </ul>
-<form action="" method="post">
+<p><strong>Total expenses:</strong> ${{ expenses_total|floatformat:"2" }}</p>
   Name: <input type="text" name="expense-name"><br />
   Description: <input type="text" name="expense-description"><br />
   Amount: <input type="text" name="expense-amount"><br />
   Category: <input type="text" name="expense-category">
-</form>
 <p><strong>FINAL PAYCHECK BALANCE</strong>: ${{ paycheck.final_balance|floatformat:"2" }}</p>
 <br />
 <input type="submit" value="Submit">
+</form>
 {% endblock main %}
