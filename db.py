@@ -13,7 +13,9 @@ class Account(db.Model):
 class Paycheck(db.Model):
 	date = db.DateProperty()
 	gross = db.FloatProperty()
-	taxes = db.ListProperty(db.Key)
+	federal_income_tax = db.ReferenceProperty(collection_name='federal')
+	state_income_tax = db.ReferenceProperty(collection_name='state')
+	other_taxes = db.ListProperty(db.Key)
 	deductions = db.ListProperty(db.Key)
 	after_deduction_balance = db.FloatProperty()
 	deposits = db.ListProperty(db.Key)

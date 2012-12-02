@@ -1,22 +1,48 @@
 {% extends "base.tpl" %}
 
+{% block headscript %}
+<script>
+function taxNameDisplay() {
+	var namefield = document.getElementById("taxname");
+	var typeselect = document.getElementById("typeselect");
+	var selection = typeselect.options[typeselect.selectedIndex].value;
+	if (selection == "federal") {
+	  namefield.style.display = "none";
+	}
+	else if (selection == "state") {
+	  namefield.style.display = "none";
+	}
+	else {
+	  namefield.style.display = "block";
+	}
+	alert(namefield.style.display);
+}
+</script>
+{% endblock headscript %}
+
 {% block main %}
 <h2>{{ paycheck.date}} Paycheck</h2>
 <p><strong>GROSS</strong>: ${{ paycheck.gross|floatformat:"2" }}</p>
 <p>Taxes:</p>
 <ul>
-  {% if taxes %}
-  {% for tax in taxes %}
+	<li><strong>FEDERAL:</strong> {% if federal_tax %}${{ federal_tax.amount|floatformat:"2" }}{% else %}<em>Not entered</em>{% endif %}
+  <li><strong>STATE:</strong> {% if state_tax %}${{ state_tax.amount|floatformat:"2" }}{% else %}<em>Not entered</em>{% endif %}
+  {% if other_taxes %}
+  {% for tax in other_taxes %}
 	<li>{{ tax.name }}: ${{ tax.amount|floatformat:"2"}}</li>
 	{% endfor %}
 	{% else %}
-	<li>No taxes entered</li>
+	<li><em>No other taxes entered</em></li>
 	{% endif %}
 </ul>
 <p><strong>Total taxes:</strong> ${{ tax_total|floatformat:"2" }}</p>
-<form>
-  Name: <input type="text" name="tax-name"><br />
-  Description: <input type="text" name="tax-description"><br />
+<form action="" method="post">
+  Type: <select name="tax-type" id="typeselect" onchange="taxNameDisplay()">
+	        {% if federal_tax %}{% else %}<option value="federal">Federal</option>{% endif %}
+	        {% if state_tax %}{% else %}<option value="state">State</option>{% endif %}
+	        <option value="other">Other</option>
+	      </select><br />
+	<span id="taxname" style="display:none">Name: <input type="text" name="tax-name"><br /></span>
   Amount: <input type="text" name="tax-amount">
 <p>Deductions:</p>
 <ul>
@@ -70,3 +96,9 @@
 <input type="submit" value="Submit">
 </form>
 {% endblock main %}
+
+{% block javascript %}
+<script>
+  taxNameDisplay();
+</script>
+{% endblock javascript %}

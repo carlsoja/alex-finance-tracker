@@ -26,6 +26,7 @@ ${{ expense.amount }}, {{ expense.frequency }}</input>
 	{% for paycheck in paychecks %}
 	<option name="paycheck" value="{{ paycheck.key }}">{{ paycheck.date }}</option>
 	{% endfor %}
+</select>
 <input type="submit" value="Submit">
 </form>
 <br /><br />

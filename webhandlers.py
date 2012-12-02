@@ -125,11 +125,20 @@ class CreatePaycheck(webapp2.RequestHandler):
 		self.response.out.write(template.render(path, template_values))
 
 class PaycheckDetail(webapp2.RequestHandler):
-  def _Render(self, paycheck):
-    taxes = []
+  def get(self):
+    path = self.request.path
+    logging.info(path)
+    p_key = db.Key(path.split('/')[-1])
+    paycheck = db.get(p_key)
+    
+    other_taxes = []
     tax_total = 0
-    for tax_key in paycheck.taxes:
-      taxes.append(db.get(tax_key))
+    if paycheck.federal_income_tax:
+      tax_total += paycheck.federal_income_tax.amount
+    if paycheck.state_income_tax:
+      tax_total += paycheck.state_income_tax.amount
+    for tax_key in paycheck.other_taxes:
+      other_taxes.append(db.get(tax_key))
       tax_total += db.get(tax_key).amount
     deductions = []
     deductions_total = 0
@@ -148,7 +157,9 @@ class PaycheckDetail(webapp2.RequestHandler):
       expenses_total += db.get(expense_key).amount
     
     template_values = { 'paycheck': paycheck,
-                        'taxes': taxes,
+                        'federal_tax': paycheck.federal_income_tax,
+                        'state_tax': paycheck.state_income_tax,
+                        'other_taxes': other_taxes,
                         'tax_total': tax_total,
                         'deductions': deductions,
                         'deductions_total': deductions_total,
@@ -159,21 +170,49 @@ class PaycheckDetail(webapp2.RequestHandler):
     path = os.path.join(os.path.dirname(__file__), 'templates/paycheckdetail.tpl')
     self.response.out.write(template.render(path, template_values))
   
-  def get(self, params):
+  def post(self):
     path = self.request.path
     logging.info(path)
-    p_key = path.split('/')[-1]
+    p_key = db.Key(path.split('/')[-1])
     paycheck = db.get(p_key)
     
-    self._Render(paycheck)
-  
-  def post(self, params):
-    path = self.request.path
-    logging.info(path)
-    p_key = path.split('/')[-1]
-    paycheck = db.get(p_key)
+    if self.request.get('tax-type'):
+      if self.request.get('tax-type') in ['federal', 'state']:
+        key_name = paycheck.date.isoformat() + '-' + self.request.get('tax-type') + 'income-tax'
+      else:
+        key_name = paycheck.date.isoformat() + '-' + self.request.get('tax-type')
+        key_name += '-' + self.request.get('tax-name')
+      new_tax = mydb.Expense(key_name=key_name)
+      # retrieve and set tax expense data
+      new_tax.date = paycheck.date
+      new_tax.amount = float(self.request.get('tax-amount'))
+      new_tax.account = None
+      new_tax.frequency = 'Core'
+      new_tax.e_category = 'Taxes'
+      new_tax.paycheck = p_key
+      if self.request.get('tax-type') == 'federal':
+        new_tax.name = 'Federal Income Tax'
+      elif self.request.get('tax-type') == 'state':
+        new_tax.name = 'State Income Tax'
+      else:
+        new_tax.name = self.request.get('tax-name')
+      new_tax.put()
+      tax = mydb.Expense.get_by_key_name(key_name)
+      # adjust paycheck values
+      if self.request.get('tax-type') == 'federal':
+        paycheck.federal_income_tax = tax.key()
+      elif self.request.get('tax-type') == 'state':
+        paycheck.state_income_tax = tax.key()
+      else:
+        paycheck.other_taxes.append(tax.key())
+      paycheck.after_deduction_balance -= tax.amount
+      paycheck.after_deposit_balance -= tax.amount
+      paycheck.final_balance -= tax.amount
+      # put new tax expense and updated paycheck entity into DB
+      paycheck.put()
     
-    self._Render(paycheck)
+    logging.info('Redirecting to: ' + self.request.url)
+    self.redirect(self.request.url)
 
 class CreateAccount(webapp2.RequestHandler):
 	def get(self):
