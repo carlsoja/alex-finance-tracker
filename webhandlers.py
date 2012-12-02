@@ -275,12 +275,7 @@ class CreateAccount(webapp2.RequestHandler):
 		
 		account.put()
 		
-		q = db.GqlQuery('SELECT * '
-		                'FROM Account')
-		
-		template_values = { 'accounts': q }
-		path = os.path.join(os.path.dirname(__file__), 'templates/account.tpl')
-		self.response.out.write(template.render(path, template_values))
+		self.redirect(self.request.url)
 
 class CreateCategories(webapp2.RequestHandler):
   def get(self):
@@ -296,6 +291,25 @@ class CreateCategories(webapp2.RequestHandler):
         sub_cats.append(cat)
     
     template_values = { 'parent_cats': parent_cats,
-                        'sub_cats', sub_cats }
+                        'sub_cats': sub_cats }
     path = os.path.join(os.path.dirname(__file__), 'templates/category.tpl')
     self.response.out.write(template.render(path, template_values))
+  
+  def post(self):
+    key_name = self.request.get('name') + '-' + self.request.get('p-c') + '-' + 'cat'
+    category = mydb.Category(key_name=key_name)
+    
+    category.id = self.request.get('name').lower().replace(' ', '-')
+    category.name = self.request.get('name')
+    category.type = self.request.get('type')
+    if self.request.get('p-c') == 'child':
+      category.has_subcats = False
+      category.is_subcat = True
+      parent_cat = db.get(self.request.get('parent_cat'))
+    else:
+      category.has_subcats = True
+      category.is_subcat = False
+    
+    category.put()
+    
+    self.redirect(self.request.url)

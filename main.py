@@ -7,5 +7,6 @@ application = webapp2.WSGIApplication([
     ('/', webhandlers.MainPage),
     ('/paycheck', webhandlers.CreatePaycheck),
     ('/paycheck/detail/.*', webhandlers.PaycheckDetail),
-    ('/account', webhandlers.CreateAccount)
+    ('/account', webhandlers.CreateAccount),
+    ('/category', webhandlers.CreateCategories)
     ], debug=True)
