@@ -176,12 +176,12 @@ class PaycheckDetail(webapp2.RequestHandler):
     p_key = db.Key(path.split('/')[-1])
     paycheck = db.get(p_key)
     
-    if self.request.get('tax-type'):
+    if self.request.get('tax-type') is not '':
+      key_name = paycheck.date.isoformat() + '-' + self.request.get('tax-type')
       if self.request.get('tax-type') in ['federal', 'state']:
-        key_name = paycheck.date.isoformat() + '-' + self.request.get('tax-type') + 'income-tax'
+        key_name += 'income-tax'
       else:
-        key_name = paycheck.date.isoformat() + '-' + self.request.get('tax-type')
-        key_name += '-' + self.request.get('tax-name')
+        key_name += '-' + self.request.get('tax-name') + '-tax'
       new_tax = mydb.Expense(key_name=key_name)
       # retrieve and set tax expense data
       new_tax.date = paycheck.date
@@ -208,7 +208,48 @@ class PaycheckDetail(webapp2.RequestHandler):
       paycheck.after_deduction_balance -= tax.amount
       paycheck.after_deposit_balance -= tax.amount
       paycheck.final_balance -= tax.amount
-      # put new tax expense and updated paycheck entity into DB
+      # put updated paycheck entity into DB
+      paycheck.put()
+    
+    if self.request.get('deduction-amount'):
+      key_name = paycheck.date.isoformat() + '-'
+      ecat = self.request.get('deduction-ecat')
+      dcat = self.request.get('deduction-dcat')
+      name = self.request.get('deduction-name')
+      if ecat is not '':
+        key_name += ecat
+      if dcat is not '':
+        key_name += dcat
+      if ecat == 'other' or dcat == 'other':
+        key_name += '-' + name
+      key_name += '-deduction'
+      new_deduction = mydb.Expense(key_name=key_name)
+      new_deduction.date = paycheck.date
+      new_deduction.amount = float(self.request.get('deduction-amount'))
+      new_deduction.account = None
+      new_deduction.paycheck = p_key
+      if ecat == 'other' or dcat == 'other':
+        new_deduction.frequency = 'One-Time'
+        new_deduction.e_category = 'Other Deduction'
+      else:
+        new_deduction.freqency = 'Core'
+        if ecat is not '':
+          category = ecat[0].upper() + ecat[1:]
+        else:
+          category = dcat[0].upper() + dcat[1:]
+        new_deduction.e_category = category
+      if name is not '':
+        new_deduction.name = name
+      else:
+        new_deduction.name = category
+      new_deduction.put()
+      deduction = mydb.Expense.get_by_key_name(key_name)
+      # adjust paycheck values
+      paycheck.deductions.append(deduction.key())
+      paycheck.after_deduction_balance -= deduction.amount
+      paycheck.after_deposit_balance -= deduction.amount
+      paycheck.final_balance -= deduction.amount
+      # put updated paycheck entity into DB
       paycheck.put()
     
     logging.info('Redirecting to: ' + self.request.url)
@@ -240,3 +281,21 @@ class CreateAccount(webapp2.RequestHandler):
 		template_values = { 'accounts': q }
 		path = os.path.join(os.path.dirname(__file__), 'templates/account.tpl')
 		self.response.out.write(template.render(path, template_values))
+
+class CreateCategories(webapp2.RequestHandler):
+  def get(self):
+    q = db.GqlQuery('SELECT * '
+                    'FROM Category ')
+                    
+    parent_cats = []
+    sub_cats = []
+    for cat in q:
+      if cat.has_subcats:
+        parent_cats.append(cat)
+      else:
+        sub_cats.append(cat)
+    
+    template_values = { 'parent_cats': parent_cats,
+                        'sub_cats', sub_cats }
+    path = os.path.join(os.path.dirname(__file__), 'templates/category.tpl')
+    self.response.out.write(template.render(path, template_values))

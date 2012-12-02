@@ -46,3 +46,10 @@ class Deposit(Transaction):
 	d_type = db.StringProperty(
 	  choices = set(['Savings', 'Investment', 'Retirement']),
 	  default = 'Savings')
+
+class Category(db.Model):
+  id = db.StringProperty()
+  name = db.StringProperty()
+  type = db.StringProperty()
+  has_subcats = db.BooleanProperty()
+  subcats = db.ListProperty(db.Key)

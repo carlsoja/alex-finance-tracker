@@ -19,21 +19,27 @@ function taxNameDisplay() {
 
 function deductionTypeDisplay() {
 	var deduct_type_form = document.getElementById("deducttype");
-	var expense_cats = document.getElementById("expensecat");
-	var deposit_cats = document.getElementById("depositcat");
+	var expense_cat = document.getElementById("expensecat");
+	var deposit_cat = document.getElementById("depositcat");
+	var expense_cats = document.getElementById("expensecats");
+	var deposit_cats = document.getElementById("depositcats");
 	
 	var type_selection = deduct_type_form.options[deduct_type_form.selectedIndex].value;
 	if (type_selection == "expense") {
-		expense_cats.style.display = "block";
-		deposit_cats.style.display = "none";
+		expense_cat.style.display = "block";
+		deposit_cat.style.display = "none";
+		deposit_cats.selectedIndex = 0;
 	}
 	else if (type_selection == "deposit") {
-		expense_cats.style.display = "none";
-		deposit_cats.style.display = "block";
+		expense_cat.style.display = "none";
+		deposit_cat.style.display = "block";
+	  expense_cats.selectedIndex = 0;
 	}
 	else {
-		expense_cats.style.display = "none";
-		deposit_cats.style.display = "none";
+		expense_cat.style.display = "none";
+		deposit_cat.style.display = "none";
+		expense_cats.selectedIndex = 0;
+		deposit_cats.selectedIndex = 0;
 	}
 }
 
@@ -42,12 +48,14 @@ function deductionNameDisplay() {
 	var deposit_cats = document.getElementById("depositcats");
 	var expense_selection = expense_cats.options[expense_cats.selectedIndex].value;
 	var deposit_selection = deposit_cats.options[deposit_cats.selectedIndex].value;
-	var deductname = document.getElementById("deductname");
+	var namediv = document.getElementById("deductname");
+	var namefield = document.getElementById("dname");
 	if (expense_selection == "other" || deposit_selection == "other") {
 		deductname.style.display = "block";
 	}
 	else {
 		deductname.style.display = "none";
+		namefield.value = "";
 	}
 }
 </script>
@@ -77,6 +85,8 @@ function deductionNameDisplay() {
 	      </select><br />
 	<div id="taxname" style="display:none">Name: <input type="text" name="tax-name"><br /></div>
   Amount: <input type="text" name="tax-amount">
+  <input type="submit" value="Submit">
+</form>
 <p>Deductions:</p>
 <ul>
   {% if deductions %}
@@ -88,13 +98,15 @@ function deductionNameDisplay() {
 	{% endif %}
 </ul>
 <p><strong>Total deductions:</strong> ${{ deductions_total|floatformat:"2" }}</p>
+<form action="" method="post">
   Amount: <input type="text" name="deduction-amount"><br />
-  Type: <select name="deduction-type" id="deducttype" onchange="deductionTypeDisplay()">
+  Type: <select name="deduction-type" id="deducttype" onchange="deductionTypeDisplay(); deductionNameDisplay();">
 	        <option value="expense">Expense</option>
 	        <option value="deposit">Deposit</option>
 	      </select><br />
 	<div id="expensecat" style="display:none">
 		Expense Category: <select name="deduction-ecat" id="expensecats" onchange="deductionNameDisplay()">
+		            <option value=""></option>
 		            <option value="health">Health</option>
 		            <option value="dental">Dental</option>
 		            <option value="vision">Vision</option>
@@ -105,12 +117,15 @@ function deductionNameDisplay() {
 	</div>
 	<div id="depositcat" style="display:none">
 		Deposit Category: <select name="deduction-dcat" id="depositcats" onchange="deductionNameDisplay()">
+			                  <option value=""></option>
 			                  <option value="401k">401(k)</option>
 			                  <option value="internet">Internet Reimbursement</option>
 			                  <option value="other">Other</option>
 			                </select><br />
 	</div>
-	<div id="deductname" style="display:none">Name: <input type="text" name="deduction-name"><br /></div>
+	<div id="deductname" style="display:none">Name: <input type="text" id="dname" name="deduction-name"><br /></div>
+	<input type="submit" value="Submit">
+</form>
 <p><strong>AFTER DEDUCTIONS</strong>: ${{ paycheck.after_deduction_balance|floatformat:"2" }}</p>
 <p>Deposits:</p>
 <ul>
@@ -123,10 +138,13 @@ function deductionNameDisplay() {
 	{% endif %}
 </ul>
 <p><strong>Total deposits:</strong> ${{ deposits_total|floatformat:"2" }}</p>
+<form action="" method="post">
   Name: <input type="text" name="deposit-name"><br />
   Description: <input type="text" name="deposit-description"><br />
   Amount: <input type="text" name="deposit-amount"><br />
   Category: <input type="text" name="deposit-category">
+	<input type="submit" value="Submit">
+</form>
 <p><strong>AFTER DEPOSITS</strong>: ${{ paycheck.after_deposit_balance|floatformat:"2" }}</p>
 <p>Expenses:</p>
 <ul>
@@ -139,14 +157,14 @@ function deductionNameDisplay() {
 	{% endif %}
 </ul>
 <p><strong>Total expenses:</strong> ${{ expenses_total|floatformat:"2" }}</p>
+<form action="" method="post">
   Name: <input type="text" name="expense-name"><br />
   Description: <input type="text" name="expense-description"><br />
   Amount: <input type="text" name="expense-amount"><br />
   Category: <input type="text" name="expense-category">
-<p><strong>FINAL PAYCHECK BALANCE</strong>: ${{ paycheck.final_balance|floatformat:"2" }}</p>
-<br />
-<input type="submit" value="Submit">
+  <input type="submit" value="Submit">
 </form>
+<p><strong>FINAL PAYCHECK BALANCE</strong>: ${{ paycheck.final_balance|floatformat:"2" }}</p>
 {% endblock main %}
 
 {% block javascript %}
