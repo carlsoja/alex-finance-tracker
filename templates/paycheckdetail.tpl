@@ -15,7 +15,40 @@ function taxNameDisplay() {
 	else {
 	  namefield.style.display = "block";
 	}
-	alert(namefield.style.display);
+}
+
+function deductionTypeDisplay() {
+	var deduct_type_form = document.getElementById("deducttype");
+	var expense_cats = document.getElementById("expensecat");
+	var deposit_cats = document.getElementById("depositcat");
+	
+	var type_selection = deduct_type_form.options[deduct_type_form.selectedIndex].value;
+	if (type_selection == "expense") {
+		expense_cats.style.display = "block";
+		deposit_cats.style.display = "none";
+	}
+	else if (type_selection == "deposit") {
+		expense_cats.style.display = "none";
+		deposit_cats.style.display = "block";
+	}
+	else {
+		expense_cats.style.display = "none";
+		deposit_cats.style.display = "none";
+	}
+}
+
+function deductionNameDisplay() {
+	var expense_cats = document.getElementById("expensecats");
+	var deposit_cats = document.getElementById("depositcats");
+	var expense_selection = expense_cats.options[expense_cats.selectedIndex].value;
+	var deposit_selection = deposit_cats.options[deposit_cats.selectedIndex].value;
+	var deductname = document.getElementById("deductname");
+	if (expense_selection == "other" || deposit_selection == "other") {
+		deductname.style.display = "block";
+	}
+	else {
+		deductname.style.display = "none";
+	}
 }
 </script>
 {% endblock headscript %}
@@ -42,7 +75,7 @@ function taxNameDisplay() {
 	        {% if state_tax %}{% else %}<option value="state">State</option>{% endif %}
 	        <option value="other">Other</option>
 	      </select><br />
-	<span id="taxname" style="display:none">Name: <input type="text" name="tax-name"><br /></span>
+	<div id="taxname" style="display:none">Name: <input type="text" name="tax-name"><br /></div>
   Amount: <input type="text" name="tax-amount">
 <p>Deductions:</p>
 <ul>
@@ -55,10 +88,29 @@ function taxNameDisplay() {
 	{% endif %}
 </ul>
 <p><strong>Total deductions:</strong> ${{ deductions_total|floatformat:"2" }}</p>
-  Name: <input type="text" name="deduction-name"><br />
-  Description: <input type="text" name="deduction-description"><br />
   Amount: <input type="text" name="deduction-amount"><br />
-  Category: <input type="text" name="deduction-category">
+  Type: <select name="deduction-type" id="deducttype" onchange="deductionTypeDisplay()">
+	        <option value="expense">Expense</option>
+	        <option value="deposit">Deposit</option>
+	      </select><br />
+	<div id="expensecat" style="display:none">
+		Expense Category: <select name="deduction-ecat" id="expensecats" onchange="deductionNameDisplay()">
+		            <option value="health">Health</option>
+		            <option value="dental">Dental</option>
+		            <option value="vision">Vision</option>
+		            <option value="life">Life</option>
+		            <option value="gym">Gym</option>
+		            <option value="other">Other</option>
+		          </select><br />
+	</div>
+	<div id="depositcat" style="display:none">
+		Deposit Category: <select name="deduction-dcat" id="depositcats" onchange="deductionNameDisplay()">
+			                  <option value="401k">401(k)</option>
+			                  <option value="internet">Internet Reimbursement</option>
+			                  <option value="other">Other</option>
+			                </select><br />
+	</div>
+	<div id="deductname" style="display:none">Name: <input type="text" name="deduction-name"><br /></div>
 <p><strong>AFTER DEDUCTIONS</strong>: ${{ paycheck.after_deduction_balance|floatformat:"2" }}</p>
 <p>Deposits:</p>
 <ul>
@@ -100,5 +152,7 @@ function taxNameDisplay() {
 {% block javascript %}
 <script>
   taxNameDisplay();
+  deductionTypeDisplay();
+  deductionNameDisplay();
 </script>
 {% endblock javascript %}
