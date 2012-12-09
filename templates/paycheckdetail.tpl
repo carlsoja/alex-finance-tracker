@@ -2,21 +2,18 @@
 
 {% block headscript %}
 <script>
-function taxNameDisplay() {
-	var namefield = document.getElementById("taxname");
-	var typeselect = document.getElementById("typeselect");
+function nameDisplay(fieldid, selectid) {
+	var namefield = document.getElementById(fieldid);
+	var typeselect = document.getElementById(selectid);
 	var selection = typeselect.options[typeselect.selectedIndex].value;
-	if (selection == "federal") {
-	  namefield.style.display = "none";
-	}
-	else if (selection == "state") {
-	  namefield.style.display = "none";
+	if (selection == "other") {
+		namefield.style.display = "block";
 	}
 	else {
-	  namefield.style.display = "block";
+		namefield.style.display = "none";
 	}
 }
-
+/*
 function deductionTypeDisplay() {
 	var deduct_type_form = document.getElementById("deducttype");
 	var expense_cat = document.getElementById("expensecat");
@@ -42,22 +39,7 @@ function deductionTypeDisplay() {
 		deposit_cats.selectedIndex = 0;
 	}
 }
-
-function deductionNameDisplay() {
-	var expense_cats = document.getElementById("expensecats");
-	var deposit_cats = document.getElementById("depositcats");
-	var expense_selection = expense_cats.options[expense_cats.selectedIndex].value;
-	var deposit_selection = deposit_cats.options[deposit_cats.selectedIndex].value;
-	var namediv = document.getElementById("deductname");
-	var namefield = document.getElementById("dname");
-	if (expense_selection == "other" || deposit_selection == "other") {
-		deductname.style.display = "block";
-	}
-	else {
-		deductname.style.display = "none";
-		namefield.value = "";
-	}
-}
+*/
 </script>
 {% endblock headscript %}
 
@@ -78,7 +60,7 @@ function deductionNameDisplay() {
 </ul>
 <p><strong>Total taxes:</strong> ${{ tax_total|floatformat:"2" }}</p>
 <form action="" method="post">
-  Type: <select name="tax-type" id="typeselect" onchange="taxNameDisplay()">
+  Type: <select name="tax-type" id="taxtypeselect" onchange="a='taxname';b='taxtypeselect';nameDisplay(a,b);">
 	        {% if federal_tax %}{% else %}<option value="federal">Federal</option>{% endif %}
 	        {% if state_tax %}{% else %}<option value="state">State</option>{% endif %}
 	        <option value="other">Other</option>
@@ -89,42 +71,32 @@ function deductionNameDisplay() {
 </form>
 <p>Deductions:</p>
 <ul>
+	<li><strong>MEDICAL:</strong> {% if med_insurance %}${{ med_insurance.amount|floatformat:"2" }}{% else %}<em>Not entered</em>{% endif %}
+	<li><strong>DENTAL:</strong> {% if dental_insurance %}${{ dental_insurance.amount|floatformat:"2" }}{% else %}<em>Not entered</em>{% endif %}
+	<li><strong>LIFE:</strong> {% if life_insurance %}${{ life_insurance.amount|floatformat:"2" }}{% else %}<em>Not entered</em>{% endif %}
+	<li><strong>VISION:</strong> {% if vision_insurance %}${{ vision_insurance.amount|floatformat:"2" }}{% else %}<em>Not entered</em>{% endif %}
+	<li><strong>401k:</strong> {% if 401k %}${{ 401k.amount|floatformat:"2" }}{% else %}<em>Not entered</em>{% endif %}
   {% if deductions %}
   {% for d in deductions %}
 	<li>{{ d.name }}: ${{ d.amount|floatformat:"2"}}</li>
 	{% endfor %}
 	{% else %}
-	<li>No deductions entered</li>
+	<li><em>No other deductions entered</em></li>
 	{% endif %}
 </ul>
 <p><strong>Total deductions:</strong> ${{ deductions_total|floatformat:"2" }}</p>
 <form action="" method="post">
-  Amount: <input type="text" name="deduction-amount"><br />
-  Type: <select name="deduction-type" id="deducttype" onchange="deductionTypeDisplay(); deductionNameDisplay();">
-	        <option value="expense">Expense</option>
-	        <option value="deposit">Deposit</option>
+  Type: <select name="deduction-type" id="deducttypeselect" onchange="a='deductname';b='deducttypeselect';nameDisplay(a,b);">
+	        {% if med_insurance %}{% else %}<option value="Medical">Medical</option>{% endif %}
+	        {% if dental_insurance %}{% else %}<option value="Dental">Dental</option>{% endif %}
+	        {% if life_insurance %}{% else %}<option value="Life">Life</option>{% endif %}
+	        {% if vision_insurance %}{% else %}<option value="Vision">Vision</option>{% endif %}
+	        {% if 401k %}{% else %}<option value="401k">401k</option>{% endif %}
+	        <option value="other">Other</option>
 	      </select><br />
-	<div id="expensecat" style="display:none">
-		Expense Category: <select name="deduction-ecat" id="expensecats" onchange="deductionNameDisplay()">
-		            <option value=""></option>
-		            <option value="health">Health</option>
-		            <option value="dental">Dental</option>
-		            <option value="vision">Vision</option>
-		            <option value="life">Life</option>
-		            <option value="gym">Gym</option>
-		            <option value="other">Other</option>
-		          </select><br />
-	</div>
-	<div id="depositcat" style="display:none">
-		Deposit Category: <select name="deduction-dcat" id="depositcats" onchange="deductionNameDisplay()">
-			                  <option value=""></option>
-			                  <option value="401k">401(k)</option>
-			                  <option value="internet">Internet Reimbursement</option>
-			                  <option value="other">Other</option>
-			                </select><br />
-	</div>
 	<div id="deductname" style="display:none">Name: <input type="text" id="dname" name="deduction-name"><br /></div>
-	<input type="submit" value="Submit">
+  Amount: <input type="text" name="deduction-amount">
+  <input type="submit" value="Submit">
 </form>
 <p><strong>AFTER DEDUCTIONS</strong>: ${{ paycheck.after_deduction_balance|floatformat:"2" }}</p>
 <p>Deposits:</p>
@@ -169,8 +141,11 @@ function deductionNameDisplay() {
 
 {% block javascript %}
 <script>
-  taxNameDisplay();
-  deductionTypeDisplay();
-  deductionNameDisplay();
+  var namefields = new Array('taxname', 'deductname');
+  var selectfields = new Array('taxtypeselect', 'deducttypeselect');
+  for (i=0; i < namefields.length; i++) {
+	  nameDisplay(namefields[i], selectfields[i]);
+  }
+  /*deductionTypeDisplay();*/
 </script>
 {% endblock javascript %}

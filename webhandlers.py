@@ -126,11 +126,12 @@ class CreatePaycheck(webapp2.RequestHandler):
 
 class PaycheckDetail(webapp2.RequestHandler):
   def get(self):
+    # get current paycheck data
     path = self.request.path
-    logging.info(path)
     p_key = db.Key(path.split('/')[-1])
     paycheck = db.get(p_key)
     
+    # set taxes template variables
     other_taxes = []
     tax_total = 0
     if paycheck.federal_income_tax:
@@ -140,28 +141,59 @@ class PaycheckDetail(webapp2.RequestHandler):
     for tax_key in paycheck.other_taxes:
       other_taxes.append(db.get(tax_key))
       tax_total += db.get(tax_key).amount
-    deductions = []
+
+    # set deductions template variables
     deductions_total = 0
-    for deduct_key in paycheck.deductions:
-      deductions.append(db.get(deduct_key))
+    med_deduct = ''
+    dental_deduct = ''
+    life_deduct = ''
+    vis_deduct = ''
+    d_401k = ''
+    for ins_key in paycheck.ins_deductions:
+      ins_entity = db.get(ins_key)
+      deductions_total += ins_entity.amount
+      if ins_entity.e_category == 'Medical':
+        med_deduct = ins_entity
+      elif ins_entity.e_category == 'Dental':
+        dental_deduct = ins_entity
+      elif ins_entity.e_category == 'Life':
+        life_deduct = ins_entity
+      elif ins_entity.e_category == 'Vision':
+        vis_deduct = ins_entity
+    if paycheck.ret_401k:
+      d_401k = paycheck.ret_401k
+      deductions_total += paycheck.ret_401k.amount
+    other_deductions = []
+    for deduct_key in paycheck.other_deductions:
+      other_deductions.append(db.get(deduct_key))
       deductions_total += db.get(deduct_key).amount
+    
+    # set deposits template variables
     deposits = []
     deposits_total = 0
     for deposit_key in paycheck.deposits:
       deposits.append(db.get(deposit_key))
       deposits_total += db.get(deposit_key).amount
+    
+    # set expenses template variables
     expenses = []
     expenses_total = 0
     for expense_key in paycheck.expenses:
       expenses.append(db.get(expense_key))
       expenses_total += db.get(expense_key).amount
     
+    # send all variables to template and display
     template_values = { 'paycheck': paycheck,
                         'federal_tax': paycheck.federal_income_tax,
                         'state_tax': paycheck.state_income_tax,
                         'other_taxes': other_taxes,
                         'tax_total': tax_total,
-                        'deductions': deductions,
+                        'med_insurance': med_deduct,
+                        'dental_insurance': dental_deduct,
+                        'life_insurance': life_deduct,
+                        'vision_insurance': vis_deduct,
+                        '401k': d_401k,
+                        'deductions': other_deductions,
                         'deductions_total': deductions_total,
                         'deposits': deposits,
                         'deposits_total': deposits_total,
@@ -172,7 +204,6 @@ class PaycheckDetail(webapp2.RequestHandler):
   
   def post(self):
     path = self.request.path
-    logging.info(path)
     p_key = db.Key(path.split('/')[-1])
     paycheck = db.get(p_key)
     
@@ -183,7 +214,7 @@ class PaycheckDetail(webapp2.RequestHandler):
       else:
         key_name += '-' + self.request.get('tax-name') + '-tax'
       new_tax = mydb.Expense(key_name=key_name)
-      # retrieve and set tax expense data
+      # retrieve and set tax data
       new_tax.date = paycheck.date
       new_tax.amount = float(self.request.get('tax-amount'))
       new_tax.account = None
@@ -211,41 +242,45 @@ class PaycheckDetail(webapp2.RequestHandler):
       # put updated paycheck entity into DB
       paycheck.put()
     
-    if self.request.get('deduction-amount'):
+    deduction_type = self.request.get('deduction-type')
+    if deduction_type is not '':
+      deduction_name = self.request.get('deduction-name')
+      deduction_amount = self.request.get('deduction-amount')
       key_name = paycheck.date.isoformat() + '-'
-      ecat = self.request.get('deduction-ecat')
-      dcat = self.request.get('deduction-dcat')
-      name = self.request.get('deduction-name')
-      if ecat is not '':
-        key_name += ecat
-      if dcat is not '':
-        key_name += dcat
-      if ecat == 'other' or dcat == 'other':
-        key_name += '-' + name
+      if deduction_type == 'other':
+        key_name += 'other-' + deduction_name
+      else:
+        key_name += deduction_type
       key_name += '-deduction'
       new_deduction = mydb.Expense(key_name=key_name)
       new_deduction.date = paycheck.date
-      new_deduction.amount = float(self.request.get('deduction-amount'))
+      new_deduction.amount = float(deduction_amount)
       new_deduction.account = None
       new_deduction.paycheck = p_key
-      if ecat == 'other' or dcat == 'other':
+      logging.info(new_deduction.name)
+      if deduction_type == 'other':
         new_deduction.frequency = 'One-Time'
         new_deduction.e_category = 'Other Deduction'
       else:
         new_deduction.freqency = 'Core'
-        if ecat is not '':
-          category = ecat[0].upper() + ecat[1:]
-        else:
-          category = dcat[0].upper() + dcat[1:]
-        new_deduction.e_category = category
-      if name is not '':
-        new_deduction.name = name
+        new_deduction.e_category = deduction_type
+      if deduction_type == 'other':
+        new_deduction.name = deduction_name
       else:
-        new_deduction.name = category
+        if deduction_type == '401k':
+          new_deduction.name = '401k Contribution'
+        else:
+          new_deduction.name = deduction_type
+          new_deduction.name += ' Insurance Deduction'
       new_deduction.put()
       deduction = mydb.Expense.get_by_key_name(key_name)
       # adjust paycheck values
-      paycheck.deductions.append(deduction.key())
+      if deduction_type == 'other':
+        paycheck.other_deductions.append(deduction.key())
+      elif deduction_type == '401k':
+        paycheck.ret_401k = deduction.key()
+      else:
+        paycheck.ins_deductions.append(deduction.key())
       paycheck.after_deduction_balance -= deduction.amount
       paycheck.after_deposit_balance -= deduction.amount
       paycheck.final_balance -= deduction.amount
