@@ -49,6 +49,9 @@ class Deposit(Transaction):
 	  choices = set(['Savings', 'Investment', 'Retirement']),
 	  default = 'Savings')
 
+class Transfer(Transaction):
+  receiving_account = db.ReferenceProperty(collection_name='rec_accounts')
+
 class Category(db.Model):
   id = db.StringProperty()
   name = db.StringProperty()

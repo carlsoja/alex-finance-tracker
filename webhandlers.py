@@ -169,6 +169,9 @@ class PaycheckDetail(webapp2.RequestHandler):
       deductions_total += db.get(deduct_key).amount
     
     # set deposits template variables
+    accounts = db.GqlQuery('SELECT * '
+                                   'FROM Account '
+                                   'WHERE a_type != \'Checking\'')
     deposits = []
     deposits_total = 0
     for deposit_key in paycheck.deposits:
@@ -195,6 +198,7 @@ class PaycheckDetail(webapp2.RequestHandler):
                         '401k': d_401k,
                         'deductions': other_deductions,
                         'deductions_total': deductions_total,
+                        'accounts': accounts,
                         'deposits': deposits,
                         'deposits_total': deposits_total,
                         'expenses': expenses,
@@ -257,7 +261,6 @@ class PaycheckDetail(webapp2.RequestHandler):
       new_deduction.amount = float(deduction_amount)
       new_deduction.account = None
       new_deduction.paycheck = p_key
-      logging.info(new_deduction.name)
       if deduction_type == 'other':
         new_deduction.frequency = 'One-Time'
         new_deduction.e_category = 'Other Deduction'
@@ -287,6 +290,41 @@ class PaycheckDetail(webapp2.RequestHandler):
       # put updated paycheck entity into DB
       paycheck.put()
     
+    deposit_account = self.request.get('deposit-account')
+    if deposit_account is not '':
+      # get account entity from retrieved key_name
+      account_db = mydb.Account.get_by_key_name(deposit_account)
+      # set new deposit entity key_name
+      deposit_amount = self.request.get('deposit-amount')
+      deposit_description = self.request.get('deposit-description')
+      key_name = paycheck.date.isoformat() + '-'
+      key_name += deposit_account
+      key_name += '-deposit'
+      # create new deposit entity with key_name and set entity data
+      new_deposit = mydb.Transfer(key_name=key_name)
+      new_deposit.date = DateFromString(self.request.get('deposit-date'))
+      new_deposit.amount = float(deposit_amount)
+      new_deposit.description = deposit_description
+      new_deposit.account = None
+      new_deposit.receiving_account = account_db.key()
+      new_deposit.paycheck = p_key
+      new_deposit.frequency = 'Regular'
+      new_deposit.name = deposit_account + ' - ' + paycheck.date.isoformat() + ' Paycheck Deposit'
+      new_deposit.verified = False
+      new_deposit.put()
+      deposit = mydb.Transfer.get_by_key_name(key_name)
+      # adjust paycheck values
+      paycheck.deposits.append(deposit.key())
+      paycheck.after_deposit_balance -= deposit.amount
+      paycheck.final_balance -= deposit.amount
+      # put updated paycheck entity into DB
+      paycheck.put()
+      # adjust account balances
+      account_db.unv_balance += deposit.amount
+      account_db.ver_balance += deposit.amount
+      # put updated account entity into DB
+      account_db.put()
+    
     logging.info('Redirecting to: ' + self.request.url)
     self.redirect(self.request.url)
 
@@ -306,6 +344,7 @@ class CreateAccount(webapp2.RequestHandler):
 		account.name = self.request.get('name')
 		account.a_type = self.request.get('type')
 		account.unv_balance = float(self.request.get('starting'))
+		account.ver_balance = float(self.request.get('starting'))
 		account.last_verified = DateFromString(self.request.get('last_verified'))
 		
 		account.put()

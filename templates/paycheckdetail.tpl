@@ -44,6 +44,7 @@ function deductionTypeDisplay() {
 {% endblock headscript %}
 
 {% block main %}
+<p><a href="/">Home</a> > {{ paycheck.date }} Paycheck</p>
 <h2>{{ paycheck.date}} Paycheck</h2>
 <p><strong>GROSS</strong>: ${{ paycheck.gross|floatformat:"2" }}</p>
 <p>Taxes:</p>
@@ -101,20 +102,22 @@ function deductionTypeDisplay() {
 <p><strong>AFTER DEDUCTIONS</strong>: ${{ paycheck.after_deduction_balance|floatformat:"2" }}</p>
 <p>Deposits:</p>
 <ul>
-  {% if deposits %}
   {% for d in deposits %}
-	<li>{{ d.name }}: ${{ d.amount|floatformat:"2"}}</li>
-	{% endfor %}
-	{% else %}
+	<li>{{ d.receiving_account.name }}: ${{ d.amount|floatformat:"2"}} - {{ d.description }}</li>
+	{% empty %}
 	<li>No deposits entered</li>
-	{% endif %}
+	{% endfor %}
 </ul>
 <p><strong>Total deposits:</strong> ${{ deposits_total|floatformat:"2" }}</p>
 <form action="" method="post">
-  Name: <input type="text" name="deposit-name"><br />
-  Description: <input type="text" name="deposit-description"><br />
+  Account: <select name="deposit-account" id="depositaccountselect">
+	           {% for account in accounts|dictsort:"name" %}
+	           <option value="{{ account.key.name }}">{{ account.name }}</option>
+	           {% endfor %}
+	         </select><br />
   Amount: <input type="text" name="deposit-amount"><br />
-  Category: <input type="text" name="deposit-category">
+  Date: <input type="text" name="deposit-date"><br />
+  Description: <input type="text" name="deposit-description"><br />
 	<input type="submit" value="Submit">
 </form>
 <p><strong>AFTER DEPOSITS</strong>: ${{ paycheck.after_deposit_balance|floatformat:"2" }}</p>
