@@ -42,7 +42,9 @@ class Transaction(db.Model):
 
 class Expense(Transaction):
 	paid = db.BooleanProperty()
-	e_category = db.StringProperty()
+	parent_e_category = db.ReferenceProperty(collection_name='parent_e_cats')
+	child_e_category = db.ReferenceProperty(collection_name='child_e_cats')
+	vendor = db.StringProperty()
 
 class Deposit(Transaction):
 	d_type = db.StringProperty(
@@ -59,4 +61,4 @@ class Category(db.Model):
   has_subcats = db.BooleanProperty()
   subcats = db.ListProperty(db.Key)
   is_subcat = db.BooleanProperty()
-  #parent_cat = db.ReferenceProperty(collection_name='parent')
+  parent_cat = db.ReferenceProperty(collection_name='parent_cats')

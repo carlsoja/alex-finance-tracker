@@ -13,6 +13,11 @@ def DateFromString(date):
 	new_date = datetime.datetime.strptime(date, '%Y-%m-%d')
 	return datetime.date(new_date.year, new_date.month, new_date.day)
 
+def CleanKeyName(key_name):
+  key_name = key_name.replace(' ', '-').replace('&', '-').replace('--', '-')
+  key_name = key_name.replace('--', '-').lower()
+  return key_name
+
 class MainPage(webapp2.RequestHandler):
   def get(self):
     u_expenses = db.GqlQuery('SELECT * FROM Expense WHERE paycheck = NULL ORDER BY date')
@@ -170,8 +175,8 @@ class PaycheckDetail(webapp2.RequestHandler):
     
     # set deposits template variables
     accounts = db.GqlQuery('SELECT * '
-                                   'FROM Account '
-                                   'WHERE a_type != \'Checking\'')
+                           'FROM Account '
+                           'WHERE a_type != \'Checking\'')
     deposits = []
     deposits_total = 0
     for deposit_key in paycheck.deposits:
@@ -179,6 +184,23 @@ class PaycheckDetail(webapp2.RequestHandler):
       deposits_total += db.get(deposit_key).amount
     
     # set expenses template variables
+    # get all parent categories
+    parent_categories = db.GqlQuery('SELECT * '
+                                    'FROM Category '
+                                    'WHERE has_subcats = True '
+                                    'ORDER BY name ASC')
+    # get all child categories
+    child_categories = db.GqlQuery('SELECT * '
+                                   'FROM Category '
+                                   'WHERE has_subcats = False')
+    # put child categories in groups list with same order as parent categories list
+    child_cats_groups = []
+    for cat in parent_categories: # loop through parent categories
+      # create list of sub-cats with parent cat = parent cat currently being looped through
+      sub_cat_list = [x for x in child_categories if x.parent_cat.key() == cat.key()]
+      if len(sub_cat_list) != 0:
+        child_cats_groups.append(sub_cat_list)
+
     expenses = []
     expenses_total = 0
     for expense_key in paycheck.expenses:
@@ -201,6 +223,8 @@ class PaycheckDetail(webapp2.RequestHandler):
                         'accounts': accounts,
                         'deposits': deposits,
                         'deposits_total': deposits_total,
+                        'parent_cats': parent_categories,
+                        'child_cat_groups': child_cats_groups,
                         'expenses': expenses,
                         'expenses_total': expenses_total }
     path = os.path.join(os.path.dirname(__file__), 'templates/paycheckdetail.tpl')
@@ -325,6 +349,49 @@ class PaycheckDetail(webapp2.RequestHandler):
       # put updated account entity into DB
       account_db.put()
     
+    expense_vendor = self.request.get('expense-vendor')
+    if expense_vendor is not '':
+      # set new expense entity key_name
+      expense_amount = self.request.get('expense-amount')
+      expense_description = self.request.get('expense-description')
+      expense_date = self.request.get('expense-date')
+      key_name = expense_date + '-' + expense_vendor + '-' + str(expense_amount)
+      key_name = CleanKeyName(key_name)
+      # create new expense entity with key_name and set entity data
+      new_expense = mydb.Expense(key_name=key_name)
+      new_expense.date = DateFromString(expense_date)
+      new_expense.vendor = expense_vendor
+      new_expense.amount = float(expense_amount)
+      new_expense.description = expense_description
+      new_expense.account = None # TODO: set up selection of paying account for expenses
+      new_expense.paycheck = p_key
+      new_expense.frequency = 'One-Time'
+      new_expense.name = expense_date + ' - ' + expense_vendor + ' - ' + expense_amount
+      new_expense.verified = False
+      new_expense.paid = False
+      parent_cat = self.request.get('parent-cat')
+      child_cat = self.request.get('child-cat')
+      parent_db = mydb.Category.get_by_key_name(parent_cat)
+      new_expense.parent_e_category = parent_db.key()
+      if child_cat == "null":
+        new_expense.child_e_category = None
+        logging.info('NO CHILD CAT')
+      else:
+        child_db = mydb.Category.get_by_key_name(child_cat)
+        new_expense.child_e_category = child_db.key()
+      new_expense.put()
+      expense = mydb.Expense.get_by_key_name(key_name)
+      # adjust paycheck values
+      paycheck.expenses.append(expense.key())
+      paycheck.final_balance -= expense.amount
+      # put updated paycheck entity into DB
+      paycheck.put()
+      # adjust account balances TODO!!!!!
+      #account_db.unv_balance += deposit.amount
+      #account_db.ver_balance += deposit.amount
+      # put updated account entity into DB
+      #account_db.put()
+    
     logging.info('Redirecting to: ' + self.request.url)
     self.redirect(self.request.url)
 
@@ -371,6 +438,7 @@ class CreateCategories(webapp2.RequestHandler):
   
   def post(self):
     key_name = self.request.get('name') + '-' + self.request.get('p-c') + '-' + 'cat'
+    key_name = CleanKeyName(key_name)
     category = mydb.Category(key_name=key_name)
     
     category.id = self.request.get('name').lower().replace(' ', '-')
@@ -379,7 +447,7 @@ class CreateCategories(webapp2.RequestHandler):
     if self.request.get('p-c') == 'child':
       category.has_subcats = False
       category.is_subcat = True
-      parent_cat = db.get(self.request.get('parent_cat'))
+      category.parent_cat = db.get(self.request.get('parent_cat'))
     else:
       category.has_subcats = True
       category.is_subcat = False

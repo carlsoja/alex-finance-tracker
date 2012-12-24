@@ -13,33 +13,21 @@ function nameDisplay(fieldid, selectid) {
 		namefield.style.display = "none";
 	}
 }
-/*
-function deductionTypeDisplay() {
-	var deduct_type_form = document.getElementById("deducttype");
-	var expense_cat = document.getElementById("expensecat");
-	var deposit_cat = document.getElementById("depositcat");
-	var expense_cats = document.getElementById("expensecats");
-	var deposit_cats = document.getElementById("depositcats");
-	
-	var type_selection = deduct_type_form.options[deduct_type_form.selectedIndex].value;
-	if (type_selection == "expense") {
-		expense_cat.style.display = "block";
-		deposit_cat.style.display = "none";
-		deposit_cats.selectedIndex = 0;
-	}
-	else if (type_selection == "deposit") {
-		expense_cat.style.display = "none";
-		deposit_cat.style.display = "block";
-	  expense_cats.selectedIndex = 0;
-	}
-	else {
-		expense_cat.style.display = "none";
-		deposit_cat.style.display = "none";
-		expense_cats.selectedIndex = 0;
-		deposit_cats.selectedIndex = 0;
+function subcatSelectionDisplay() {
+	var parentselect = document.getElementById("expense-parent-cat");
+	var parent_selection = parentselect.options[parentselect.selectedIndex].value;
+	var parentcatids = Array({% for group in child_cat_groups %}"{{ group.0.parent_cat.key.name }}"{% if forloop.counter != child_cat_groups|length %}, {% endif %}{% endfor %});
+	for(i=0; i < parentcatids.length; i++){
+		selector = document.getElementById(parentcatids[i]);
+		if (parent_selection == parentcatids[i]) {
+			selector.style.display = "block";
+		}
+		else {
+			selector.style.display = "none";
+			selector.options[selector.selectedIndex].value = null;
+		}
 	}
 }
-*/
 </script>
 {% endblock headscript %}
 
@@ -103,7 +91,7 @@ function deductionTypeDisplay() {
 <p>Deposits:</p>
 <ul>
   {% for d in deposits %}
-	<li>{{ d.receiving_account.name }}: ${{ d.amount|floatformat:"2"}} - {{ d.description }}</li>
+	<li><strong>{{ d.receiving_account.name }}:</strong> ${{ d.amount|floatformat:"2"}} - {{ d.description }}</li>
 	{% empty %}
 	<li>No deposits entered</li>
 	{% endfor %}
@@ -133,10 +121,22 @@ function deductionTypeDisplay() {
 </ul>
 <p><strong>Total expenses:</strong> ${{ expenses_total|floatformat:"2" }}</p>
 <form action="" method="post">
-  Name: <input type="text" name="expense-name"><br />
-  Description: <input type="text" name="expense-description"><br />
+  Vendor: <input type="text" name="expense-vendor"><br />
   Amount: <input type="text" name="expense-amount"><br />
-  Category: <input type="text" name="expense-category">
+  Date: <input type="text" name="expense-date"><br />
+  Description: <input type="text" name="expense-description"><br />
+  Category: <select name="parent-cat" id="expense-parent-cat" onchange="subcatSelectionDisplay()">
+	            {% for cat in parent_cats %}
+	            <option value="{{ cat.key.name }}">{{ cat.name }}</option>
+	            {% endfor %}
+	          </select><br />
+	          {% for group in child_cat_groups %}
+	            <select name="child-cat" id="{{ group.0.parent_cat.key.name }}">
+		          {% for cat in group %}
+		            <option value="{{ cat.key.name }}">{{ cat.name }}</option>
+		          {% endfor %}
+		          </select>
+		        {% endfor %}<br />
   <input type="submit" value="Submit">
 </form>
 <p><strong>FINAL PAYCHECK BALANCE</strong>: ${{ paycheck.final_balance|floatformat:"2" }}</p>
@@ -149,6 +149,6 @@ function deductionTypeDisplay() {
   for (i=0; i < namefields.length; i++) {
 	  nameDisplay(namefields[i], selectfields[i]);
   }
-  /*deductionTypeDisplay();*/
+  subcatSelectionDisplay();
 </script>
 {% endblock javascript %}
