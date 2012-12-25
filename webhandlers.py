@@ -18,6 +18,55 @@ def CleanKeyName(key_name):
   key_name = key_name.replace('--', '-').lower()
   return key_name
 
+def DeleteExpense(key_name):
+  # get expense from DB and store amount
+  expense = mydb.Expense.get_by_key_name(key_name)
+  amount = expense.amount
+  # edit account balance if has account (not a tax/deduction)
+  if expense.account:
+    account = db.get(expense.account)
+    if account.a_type == 'Credit Card':
+      account.unv_balance -= expense.amount
+      if expense.verified:
+        account.ver_balance -= expense.amount
+    else:
+      account.unv_balance += expense.amount
+      if expense.verified:
+        account.ver_balance += expense.amount
+    account.put()
+  # find in and delete from paycheck expenses list
+  if expense.paycheck:
+    paycheck = db.get(expense.paycheck)
+    expense_type = ''
+    if expense.key() == paycheck.federal_income_tax:
+      expense_type = 'deduction'
+      paycheck.federal_income_tax = None
+    elif expense.key() == paycheck.state_income_tax:
+      expense_type = 'deduction'
+      paycheck.state_income_tax = None
+    elif expense.key() in paycheck.other_taxes:
+      expense_type = 'deduction'
+      paycheck.other_taxes.remove(expense.key()) # TEST THIS LIST REMOVAL!!!
+    elif expense.key() in paycheck.ins_deductions:
+      expense_type = 'deduction'
+      paycheck.ins_deductions.remove(expense.key()) # TEST THIS LIST REMOVAL!!!
+    elif expense.key() in paycheck.other_deductions:
+      expense_type = 'deduction'
+      paycheck.other_deductions.remove(expense.key()) # TEST THIS LIST REMOVAL!!!
+    elif expense.key() in paycheck.expenses:
+      paycheck.expenses.remove(expense.key()) # TEST THIS LIST REMOVAL!!!
+    # edit paycheck balances
+    paycheck.final_balance += amount
+    if expense_type == 'deduction':
+      paycheck.after_deduction_balance += amount
+      paycheck.after_deposit_balance += amount
+    # delete expense and put new paycheck/account data into DB
+    db.delete(expense.key())
+    if account:
+      account.put()
+    if paycheck:
+      paycheck.put()
+
 class MainPage(webapp2.RequestHandler):
   def get(self):
     u_expenses = db.GqlQuery('SELECT * FROM Expense WHERE paycheck = NULL ORDER BY date')
@@ -30,11 +79,37 @@ class MainPage(webapp2.RequestHandler):
         account_total += account.unv_balance
       else:
         account_total -= account.unv_balance
+    
+    # get all payment accounts (checking and credit card)
+    payment_accounts = db.GqlQuery('SELECT * '
+                                   'FROM Account '
+                                   'WHERE a_type IN (\'Checking\', \'Credit Card\') '
+                                   'ORDER BY a_type ASC')
+
+    # get all parent categories
+    parent_categories = db.GqlQuery('SELECT * '
+                                    'FROM Category '
+                                    'WHERE has_subcats = True '
+                                    'ORDER BY name ASC')
+    # get all child categories
+    child_categories = db.GqlQuery('SELECT * '
+                                   'FROM Category '
+                                   'WHERE has_subcats = False')
+    # put child categories in groups list with same order as parent categories list
+    child_cats_groups = []
+    for cat in parent_categories: # loop through parent categories
+      # create list of sub-cats with parent cat = parent cat currently being looped through
+      sub_cat_list = [x for x in child_categories if x.parent_cat.key() == cat.key()]
+      if len(sub_cat_list) != 0:
+        child_cats_groups.append(sub_cat_list)
 		
     template_values = { 'expenses': u_expenses,
                         'paychecks': a_paychecks,
                         'accounts': accounts,
-                        'total': account_total }
+                        'total': account_total,
+                        'payment_accounts': payment_accounts,
+                        'parent_cats': parent_categories,
+                        'child_cat_groups': child_cats_groups }
     path = os.path.join(os.path.dirname(__file__), 'templates/home.tpl')
     self.response.out.write(template.render(path, template_values))
 
@@ -184,6 +259,12 @@ class PaycheckDetail(webapp2.RequestHandler):
       deposits_total += db.get(deposit_key).amount
     
     # set expenses template variables
+    # get all payment accounts (checking and credit card)
+    payment_accounts = db.GqlQuery('SELECT * '
+                                   'FROM Account '
+                                   'WHERE a_type IN (\'Checking\', \'Credit Card\') '
+                                   'ORDER BY a_type ASC')
+    
     # get all parent categories
     parent_categories = db.GqlQuery('SELECT * '
                                     'FROM Category '
@@ -203,9 +284,23 @@ class PaycheckDetail(webapp2.RequestHandler):
 
     expenses = []
     expenses_total = 0
+    food_expenses = []
+    food_expenses_total = 0
+    gas_expenses = []
+    gas_expenses_total = 0
+    all_expenses_total = 0
     for expense_key in paycheck.expenses:
-      expenses.append(db.get(expense_key))
-      expenses_total += db.get(expense_key).amount
+      expense = db.get(expense_key)
+      if expense.parent_e_category.name == 'Food & Dining':
+        food_expenses.append(expense)
+        food_expenses_total += expense.amount
+      elif expense.child_e_category.name == 'Gas':
+        gas_expenses.append(expense)
+        gas_expenses_total += expense.amount
+      else:
+        expenses.append(expense)
+        expenses_total += expense.amount
+      all_expenses_total += expense.amount
     
     # send all variables to template and display
     template_values = { 'paycheck': paycheck,
@@ -223,10 +318,16 @@ class PaycheckDetail(webapp2.RequestHandler):
                         'accounts': accounts,
                         'deposits': deposits,
                         'deposits_total': deposits_total,
+                        'payment_accounts': payment_accounts,
                         'parent_cats': parent_categories,
                         'child_cat_groups': child_cats_groups,
                         'expenses': expenses,
-                        'expenses_total': expenses_total }
+                        'expenses_total': expenses_total,
+                        'food_expenses': food_expenses,
+                        'food_expenses_total': food_expenses_total,
+                        'gas_expenses': gas_expenses,
+                        'gas_expenses_total': gas_expenses_total,
+                        'all_expenses_total': all_expenses_total }
     path = os.path.join(os.path.dirname(__file__), 'templates/paycheckdetail.tpl')
     self.response.out.write(template.render(path, template_values))
   
@@ -351,6 +452,9 @@ class PaycheckDetail(webapp2.RequestHandler):
     
     expense_vendor = self.request.get('expense-vendor')
     if expense_vendor is not '':
+      # get account entity from retrieved key_name
+      expense_account = self.request.get('expense-account')
+      account_db = mydb.Account.get_by_key_name(expense_account)
       # set new expense entity key_name
       expense_amount = self.request.get('expense-amount')
       expense_description = self.request.get('expense-description')
@@ -363,17 +467,18 @@ class PaycheckDetail(webapp2.RequestHandler):
       new_expense.vendor = expense_vendor
       new_expense.amount = float(expense_amount)
       new_expense.description = expense_description
-      new_expense.account = None # TODO: set up selection of paying account for expenses
+      new_expense.account = account_db.key()
       new_expense.paycheck = p_key
       new_expense.frequency = 'One-Time'
       new_expense.name = expense_date + ' - ' + expense_vendor + ' - ' + expense_amount
       new_expense.verified = False
       new_expense.paid = False
       parent_cat = self.request.get('parent-cat')
-      child_cat = self.request.get('child-cat')
+      child_cat_name = 'child-' + parent_cat
+      child_cat = self.request.get(child_cat_name)
       parent_db = mydb.Category.get_by_key_name(parent_cat)
       new_expense.parent_e_category = parent_db.key()
-      if child_cat == "null":
+      if child_cat == '':
         new_expense.child_e_category = None
         logging.info('NO CHILD CAT')
       else:
@@ -386,11 +491,10 @@ class PaycheckDetail(webapp2.RequestHandler):
       paycheck.final_balance -= expense.amount
       # put updated paycheck entity into DB
       paycheck.put()
-      # adjust account balances TODO!!!!!
-      #account_db.unv_balance += deposit.amount
-      #account_db.ver_balance += deposit.amount
+      # adjust account unverified balance
+      account_db.unv_balance += expense.amount
       # put updated account entity into DB
-      #account_db.put()
+      account_db.put()
     
     logging.info('Redirecting to: ' + self.request.url)
     self.redirect(self.request.url)

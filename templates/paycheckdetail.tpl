@@ -111,27 +111,51 @@ function subcatSelectionDisplay() {
 <p><strong>AFTER DEPOSITS</strong>: ${{ paycheck.after_deposit_balance|floatformat:"2" }}</p>
 <p>Expenses:</p>
 <ul>
+	<li>Food &amp; Dining: ${{ food_expenses_total|floatformat:"2" }}
+		<ul>
+			{% for expense in food_expenses|dictsort:"date" %}
+			<li>{{ expense.date }} - {{ expense.vendor }}: ${{ expense.amount|floatformat:"2" }}</li>
+			{% empty %}
+			<li><em>No food expenses entered.</em></li>
+			{% endfor %}
+		</ul>
+	</li>
+	<li>Gas: ${{ gas_expenses_total|floatformat:"2" }}
+		<ul>
+			{% for expense in gas_expenses|dictsort:"date" %}
+			<li>{{ expense.date }} - {{ expense.vendor }}: ${{ expense.amount|floatformat:"2"}}</li>
+			{% empty %}
+			<li><em>No gas expenses entered.</em></li>
+			{% endfor %}
+		</ul>
+	</li>
   {% if expenses %}
-  {% for expense in expenses %}
-	<li>{{ expense.name }}: ${{ expense.amount|floatformat:"2"}}</li>
-	{% endfor %}
-	{% else %}
-	<li>No expenses entered</li>
+  <li>Other Expenses: ${{ expenses_total|floatformat:"2" }}
+	  <ul>
+    {% for expense in expenses|dictsort:"date" %}
+	    <li>{{ expense.date }} - {{ expense.vendor }}: ${{ expense.amount|floatformat:"2"}}</li>
+	  {% endfor %}
+	  </ul>
 	{% endif %}
 </ul>
-<p><strong>Total expenses:</strong> ${{ expenses_total|floatformat:"2" }}</p>
+<p><strong>Total expenses:</strong> ${{ all_expenses_total|floatformat:"2" }}</p>
 <form action="" method="post">
   Vendor: <input type="text" name="expense-vendor"><br />
   Amount: <input type="text" name="expense-amount"><br />
   Date: <input type="text" name="expense-date"><br />
   Description: <input type="text" name="expense-description"><br />
+  Account: <select name="expense-account">
+	         {% for account in payment_accounts %}
+	           <option value="{{ account.key.name }}">{{ account.name }}</option>
+	         {% endfor %}
+	         </select><br />
   Category: <select name="parent-cat" id="expense-parent-cat" onchange="subcatSelectionDisplay()">
 	            {% for cat in parent_cats %}
 	            <option value="{{ cat.key.name }}">{{ cat.name }}</option>
 	            {% endfor %}
 	          </select><br />
 	          {% for group in child_cat_groups %}
-	            <select name="child-cat" id="{{ group.0.parent_cat.key.name }}">
+	            <select name="child-{{ group.0.parent_cat.key.name }}" id="{{ group.0.parent_cat.key.name }}">
 		          {% for cat in group %}
 		            <option value="{{ cat.key.name }}">{{ cat.name }}</option>
 		          {% endfor %}

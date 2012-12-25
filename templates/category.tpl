@@ -1,6 +1,7 @@
 {% extends "base.tpl" %}
 
 {% block main %}
+<p><a href="/">Home</a> > Manage categories</p>
 <h2>Categories in datastore</h2>
 <h3>Parent Categories</h3>
 <ul>

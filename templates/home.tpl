@@ -1,5 +1,25 @@
 {% extends "base.tpl" %}
 
+{% block headscript %}
+<script>
+function subcatSelectionDisplay() {
+	var parentselect = document.getElementById("expense-parent-cat");
+	var parent_selection = parentselect.options[parentselect.selectedIndex].value;
+	var parentcatids = Array({% for group in child_cat_groups %}"{{ group.0.parent_cat.key.name }}"{% if forloop.counter != child_cat_groups|length %}, {% endif %}{% endfor %});
+	for(i=0; i < parentcatids.length; i++){
+		selector = document.getElementById(parentcatids[i]);
+		if (parent_selection == parentcatids[i]) {
+			selector.style.display = "block";
+		}
+		else {
+			selector.style.display = "none";
+			selector.options[selector.selectedIndex].value = null;
+		}
+	}
+}
+</script>
+{% endblock headscript %}
+
 {% block main %}
 {% if accounts %}
 <h2>Active Accounts</h2>
@@ -40,21 +60,34 @@ ${{ expense.amount }}, {{ expense.frequency }}</input>
 
 {% block form %}
 <form action="" method="post">
-  Date: <input type="text" name="date"><br />
-  Name: <input type="text" name="name"><br />
-  Description: <input type="text" name="description"><br />
-  Amount: <input type="text" name="amount"><br />
-  Account: <select name="account">
-             {% for account in accounts %}
-             <option name="{{ account.name }}" value="{{ account.key }}">{{ account.name }}</option>
-             {% endfor %}
-           </select><br />
-  Frequency: <select name="freq">
-	             <option name="One-Time" value="One-Time">One-Time</option>
-	             <option name="Regular" value="Regular">Regular</option>
-	             <option name="Core" value="Core">Core</option>
-	           </select><br />
-  Category: <input type="text" name="category"><br />
+  Vendor: <input type="text" name="expense-vendor"><br />
+  Amount: <input type="text" name="expense-amount"><br />
+  Date: <input type="text" name="expense-date"><br />
+  Description: <input type="text" name="expense-description"><br />
+  Account: <select name="expense-account">
+	         {% for account in payment_accounts %}
+	           <option value="{{ account.key.name }}">{{ account.name }}</option>
+	         {% endfor %}
+	         </select><br />
+  Category: <select name="parent-cat" id="expense-parent-cat" onchange="subcatSelectionDisplay()">
+	            {% for cat in parent_cats %}
+	            <option value="{{ cat.key.name }}">{{ cat.name }}</option>
+	            {% endfor %}
+	          </select><br />
+	          {% for group in child_cat_groups %}
+	            <select name="child-{{ group.0.parent_cat.key.name }}" id="{{ group.0.parent_cat.key.name }}">
+		          {% for cat in group %}
+		            <option value="{{ cat.key.name }}">{{ cat.name }}</option>
+		          {% endfor %}
+		          </select>
+		        {% endfor %}<br />
   <input type="submit" value="Submit">
 </form>
+<p><strong><a href="category">Manage categories</a></strong></p>
 {% endblock form %}
+
+{% block javascript %}
+<script>
+subcatSelectionDisplay();
+</script>
+{% endblock javascript %}

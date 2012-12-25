@@ -1,6 +1,7 @@
 {% extends "base.tpl" %}
 
 {% block main %}
+<p><a href="/">Home</a> > Manage accounts</p>
 <h2>Accounts in datastore</h2>
 {% for account in accounts %}
 <p>{{ account.a_type }}: {{ account.name }}<br />

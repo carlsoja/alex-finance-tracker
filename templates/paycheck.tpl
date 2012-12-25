@@ -1,6 +1,7 @@
 {% extends "base.tpl" %}
 
 {% block main %}
+<p><a href="/">Home</a> > Manage paychecks</p>
 <h2>Paychecks in datastore</h2>
 {% for paycheck in paychecks %}
 <p>{{ paycheck.date }}: {{ paycheck.gross }}<br />
