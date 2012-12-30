@@ -24,7 +24,9 @@ def DeleteExpense(key_name):
   amount = expense.amount
   # edit account balance if has account (not a tax/deduction)
   if expense.account:
-    account = db.get(expense.account)
+    account = expense.account
+    logging.info('BEFORE - unv_balance: ' + str(account.unv_balance))
+    logging.info('BEFORE - ver_balance: ' + str(account.ver_balance))
     if account.a_type == 'Credit Card':
       account.unv_balance -= expense.amount
       if expense.verified:
@@ -33,39 +35,41 @@ def DeleteExpense(key_name):
       account.unv_balance += expense.amount
       if expense.verified:
         account.ver_balance += expense.amount
+    logging.info('AFTER - unv_balance: ' + str(account.unv_balance))
+    logging.info('AFTER - ver_balance: ' + str(account.ver_balance))
     account.put()
   # find in and delete from paycheck expenses list
   if expense.paycheck:
-    paycheck = db.get(expense.paycheck)
+    paycheck = expense.paycheck
     expense_type = ''
-    if expense.key() == paycheck.federal_income_tax:
-      expense_type = 'deduction'
-      paycheck.federal_income_tax = None
-    elif expense.key() == paycheck.state_income_tax:
-      expense_type = 'deduction'
-      paycheck.state_income_tax = None
+    if paycheck.federal_income_tax:
+      if expense.key() == paycheck.federal_income_tax.key():
+        expense_type = 'deduction'
+        paycheck.federal_income_tax = None
+    elif paycheck.state_income_tax:
+      if expense.key() == paycheck.state_income_tax.key():
+        logging.info('STATE INCOME TAX')
+        expense_type = 'deduction'
+        paycheck.state_income_tax = None
     elif expense.key() in paycheck.other_taxes:
       expense_type = 'deduction'
-      paycheck.other_taxes.remove(expense.key()) # TEST THIS LIST REMOVAL!!!
+      paycheck.other_taxes.remove(expense.key())
     elif expense.key() in paycheck.ins_deductions:
       expense_type = 'deduction'
-      paycheck.ins_deductions.remove(expense.key()) # TEST THIS LIST REMOVAL!!!
+      paycheck.ins_deductions.remove(expense.key())
     elif expense.key() in paycheck.other_deductions:
       expense_type = 'deduction'
-      paycheck.other_deductions.remove(expense.key()) # TEST THIS LIST REMOVAL!!!
+      paycheck.other_deductions.remove(expense.key())
     elif expense.key() in paycheck.expenses:
-      paycheck.expenses.remove(expense.key()) # TEST THIS LIST REMOVAL!!!
+      paycheck.expenses.remove(expense.key())
     # edit paycheck balances
     paycheck.final_balance += amount
     if expense_type == 'deduction':
       paycheck.after_deduction_balance += amount
       paycheck.after_deposit_balance += amount
-    # delete expense and put new paycheck/account data into DB
+    # delete expense and put new paycheck data into DB
+    paycheck.put()
     db.delete(expense.key())
-    if account:
-      account.put()
-    if paycheck:
-      paycheck.put()
 
 class MainPage(webapp2.RequestHandler):
   def get(self):
@@ -336,7 +340,9 @@ class PaycheckDetail(webapp2.RequestHandler):
     p_key = db.Key(path.split('/')[-1])
     paycheck = db.get(p_key)
     
-    if self.request.get('tax-type') is not '':
+    if self.request.get('d-expense-key') is not '':
+      DeleteExpense(self.request.get('d-expense-key'))
+    elif self.request.get('tax-type') is not '':
       key_name = paycheck.date.isoformat() + '-' + self.request.get('tax-type')
       if self.request.get('tax-type') in ['federal', 'state']:
         key_name += 'income-tax'
@@ -370,9 +376,8 @@ class PaycheckDetail(webapp2.RequestHandler):
       paycheck.final_balance -= tax.amount
       # put updated paycheck entity into DB
       paycheck.put()
-    
-    deduction_type = self.request.get('deduction-type')
-    if deduction_type is not '':
+    elif self.request.get('deduction-type') is not '':
+      deduction_type = self.request.get('deduction-type')
       deduction_name = self.request.get('deduction-name')
       deduction_amount = self.request.get('deduction-amount')
       key_name = paycheck.date.isoformat() + '-'
@@ -414,9 +419,8 @@ class PaycheckDetail(webapp2.RequestHandler):
       paycheck.final_balance -= deduction.amount
       # put updated paycheck entity into DB
       paycheck.put()
-    
-    deposit_account = self.request.get('deposit-account')
-    if deposit_account is not '':
+    elif self.request.get('deposit-account') is not '':
+      deposit_account = self.request.get('deposit-account')
       # get account entity from retrieved key_name
       account_db = mydb.Account.get_by_key_name(deposit_account)
       # set new deposit entity key_name
@@ -449,9 +453,8 @@ class PaycheckDetail(webapp2.RequestHandler):
       account_db.ver_balance += deposit.amount
       # put updated account entity into DB
       account_db.put()
-    
-    expense_vendor = self.request.get('expense-vendor')
-    if expense_vendor is not '':
+    elif self.request.get('expense-vendor') is not '':
+      expense_vendor = self.request.get('expense-vendor')
       # get account entity from retrieved key_name
       expense_account = self.request.get('expense-account')
       account_db = mydb.Account.get_by_key_name(expense_account)

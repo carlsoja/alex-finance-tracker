@@ -42,6 +42,7 @@ class Transaction(db.Model):
 
 class Expense(Transaction):
 	paid = db.BooleanProperty()
+	e_category = db.StringProperty() # temporary until can resolve categories for deductions
 	parent_e_category = db.ReferenceProperty(collection_name='parent_e_cats')
 	child_e_category = db.ReferenceProperty(collection_name='child_e_cats')
 	vendor = db.StringProperty()
