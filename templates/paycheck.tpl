@@ -14,6 +14,13 @@ Closed: {{ paycheck.closed }}</p>
 <form action="" method="post">
   Date: <input type="text" name="date"><br />
   Gross: <input type="text" name="gross"><br />
+  {% if accounts %}
+  Account: <select name="account">
+	         {% for account in accounts|dictsort:"name" %}
+	           <option value="{{ account.key.name }}">{{ account.name }}</option>
+	         {% endfor %}
+	         </select><br />
+	{% endif %}   
   Current: <select name="current">
 	           <option value="True" selected="selected">True</option>
 	           <option value="False">False</option>

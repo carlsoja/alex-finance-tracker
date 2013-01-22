@@ -30,7 +30,7 @@
 	                <option value="parent" selected="selected">Parent</option>
 	                <option value="child">Child</option>
 	              </select><br />
-  Parent Category: <select name="parent_cat">
+  Parent Category: <select name="parent-cat">
 	                   {% for cat in parent_cats %}
 				             <option value="{{ cat.key }}">{{ cat.name }}</option>
 				             {% endfor %}

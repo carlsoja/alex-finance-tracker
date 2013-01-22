@@ -15,10 +15,25 @@ indexes:
   - name: has_subcats
   - name: name
 
+- kind: Category
+  properties:
+  - name: parent_cat
+  - name: name
+
+- kind: Expense
+  properties:
+  - name: parent_e_category
+  - name: date
+
 - kind: Expense
   properties:
   - name: paycheck
   - name: date
+
+- kind: Expense
+  properties:
+  - name: paycheck
+  - name: parent_e_category
 
 - kind: Paycheck
   properties:
@@ -30,3 +45,13 @@ indexes:
   - name: closed
   - name: date
     direction: desc
+
+- kind: Tax
+  properties:
+  - name: paycheck
+  - name: tax_type
+
+- kind: Tax
+  properties:
+  - name: paycheck2
+  - name: tax_type

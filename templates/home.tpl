@@ -43,14 +43,14 @@ function subcatSelectionDisplay() {
 <h2>Unassigned expenses</h2>
 <form action="" method="post">
 {% for expense in expenses %}
-<input type="checkbox" name="expense{{ forloop.counter }}" value="{{ expense.key }}">{{ expense.date }}: {{ expense.name }}<br />
+<input type="checkbox" name="expense{{ forloop.counter }}" value="{{ expense.key.name }}">{{ expense.date }}: {{ expense.vendor }}<br />
 ${{ expense.amount }}, {{ expense.frequency }}</input>
 <br />
 {% endfor %}
 <br /><br />
 <select name="paycheck">
 	{% for paycheck in paychecks %}
-	<option name="paycheck" value="{{ paycheck.key }}">{{ paycheck.date }}</option>
+	<option name="paycheck" value="{{ paycheck.key.name }}">{{ paycheck.date }}</option>
 	{% endfor %}
 </select>
 <input type="submit" value="Submit">
@@ -77,7 +77,7 @@ ${{ expense.amount }}, {{ expense.frequency }}</input>
 	          {% for group in child_cat_groups %}
 	            <select name="child-{{ group.0.parent_cat.key.name }}" id="{{ group.0.parent_cat.key.name }}">
 		          {% for cat in group %}
-		            <option value="{{ cat.key.name }}">{{ cat.name }}</option>
+		            <option value="{{ cat.key.name }}" {% if forloop.counter == 1 %}selected="selected"{% endif %}>{{ cat.name }}</option>
 		          {% endfor %}
 		          </select>
 		        {% endfor %}<br />
