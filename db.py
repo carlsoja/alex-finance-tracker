@@ -69,6 +69,177 @@ class Account(db.Model):
 	      total -= a.unv_balance
 	  return total
 	
+	def GetAllExpensesFromAccount(self):
+	  try:
+	    return self.account_expenses.order('-date').fetch(100)
+	  except IndexError:
+	    return None
+	
+	def GetAllUnverifiedExpensesFromAccount(self):
+	  try:
+	    return self.account_expenses.filter('verified =', False).order('-date').fetch(100)
+	  except IndexError:
+	    return None
+	
+	def GetAllVerifiedExpensesFromAccount(self):
+	  try:
+	    return self.account_expenses.filter('verified =', True).order('-date').fetch(100)
+	  except IndexError:
+	    return None
+	
+	def GetAllDepositsFromAccount(self):
+	  try:
+	    return self.account_deposits.order('-date').fetch(100)
+	  except IndexError:
+	    return None
+	
+	def GetAllUnverifiedDepositsFromAccount(self):
+	  try:
+	    return self.account_deposits.filter('verified =', False).order('-date').fetch(100)
+	  except IndexError:
+	    return None
+	
+	def GetAllVerifiedDepositsFromAccount(self):
+	  try:
+	    return self.account_deposits.filter('verified =', True).order('-date').fetch(100)
+	  except IndexError:
+	    return None
+	
+	def GetAllTransfersOriginatingFromAccount(self):
+	  try:
+	    return self.transfers_origin.order('-date').fetch(100)
+	  except IndexError:
+	    return None
+	
+	def GetAllUnverifiedTransfersOriginatingFromAccount(self):
+	  try:
+	    return self.transfers_origin.filter('verified =', False).order('-date').fetch(100)
+	  except IndexError:
+	    return None
+	
+	def GetAllVerifiedTransfersOriginatingFromAccount(self):
+	  try:
+	    return self.transfers_origin.filter('verified =', True).order('-date').fetch(100)
+	  except IndexError:
+	    return None
+	
+	def GetAllTransfersReceivedIntoAccount(self):
+	  try:
+	    return self.transfers_receiving.order('-date').fetch(100)
+	  except IndexError:
+	    return None
+	
+	def GetAllUnverifiedTransfersReceivedIntoAccount(self):
+	  try:
+	    return self.transfers_receiving.filter('verified =', False).order('-date').fetch(100)
+	  except IndexError:
+	    return None
+	
+	def GetAllVerifiedTransfersReceivedIntoAccount(self):
+	  try:
+	    return self.transfers_receiving.filter('verified =', True).order('-date').fetch(100)
+	  except IndexError:
+	    return None
+	
+	def GetRecentTransactionBalanceList(self):
+	  start_date = date.today()
+	  end_date = start_date - timedelta(days=30)
+	  current_date = start_date
+	  unv_balance = self.unv_balance
+	  ver_balance = self.ver_balance
+	  
+	  u_expenses = self.GetAllUnverifiedExpensesFromAccount()
+	  u_origin_transfers = self.GetAllUnverifiedTransfersOriginatingFromAccount()
+	  u_receiving_transfers = self.GetAllUnverifiedTransfersReceivedIntoAccount()
+	  u_deposits = self.GetAllUnverifiedDepositsFromAccount()
+	  v_expenses = self.GetAllVerifiedExpensesFromAccount()
+	  v_origin_transfers = self.GetAllVerifiedTransfersOriginatingFromAccount()
+	  v_receiving_transfers = self.GetAllVerifiedTransfersReceivedIntoAccount()
+	  v_deposits = self.GetAllVerifiedDepositsFromAccount()
+	  
+	  t_list = []
+	  e_index = 0
+	  t_o_index = 0
+	  t_r_index = 0
+	  d_index = 0
+	  # unverified transactions to t_list in date/type order
+	  while(current_date >= end_date):
+	    try:
+	      if u_expenses[e_index].date == current_date:
+	        t_list.append((u_expenses[e_index], unv_balance, ver_balance))
+	        unv_balance += u_expenses[e_index].amount
+	        e_index += 1
+	        continue
+	    except IndexError:
+	      pass
+	    try:
+	      if u_origin_transfers[t_o_index].date == current_date:
+	        t_list.append((u_origin_transfers[t_o_index], unv_balance, ver_balance))
+	        unv_balance += u_origin_transfers[t_o_index].amount
+	        t_o_index += 1
+	        continue
+	    except IndexError:
+	      pass
+	    try:
+	      if u_receiving_transfers[t_r_index].date == current_date:
+	        t_list.append((u_receiving_transfers[t_r_index], unv_balance, ver_balance))
+	        unv_balance -= u_receiving_transfers[t_r_index].amount
+	        t_r_index += 1
+	        continue
+	    except IndexError:
+	      pass
+	    try:
+	      if u_deposits[d_index].date == current_date:
+	        t_list.append((u_deposits[d_index], unv_balance, ver_balance))
+	        unv_balance -= u_deposits[d_index].amount
+	        d_index += 1
+	        continue
+	    except IndexError:
+	      pass
+	    current_date -= timedelta(days=1)
+	  
+	  current_date = start_date
+	  e_index = 0
+	  t_o_index = 0
+	  t_r_index = 0
+	  d_index = 0
+	  # add verified transactions to t_list in date/type order
+	  while(current_date >= end_date):
+	    try:
+	      if v_expenses[e_index].date == current_date:
+	        t_list.append((v_expenses[e_index], unv_balance, ver_balance))
+	        ver_balance += v_expenses[e_index].amount
+	        e_index += 1
+	        continue
+	    except IndexError:
+	      pass
+	    try:
+	      if v_origin_transfers[t_o_index].date == current_date:
+	        t_list.append((v_origin_transfers[t_o_index], unv_balance, ver_balance))
+	        ver_balance += v_origin_transfers[t_o_index].amount
+	        t_o_index += 1
+	        continue
+	    except IndexError:
+	      pass
+	    try:
+	      if v_receiving_transfers[t_r_index].date == current_date:
+	        t_list.append((v_receiving_transfers[t_r_index], unv_balance, ver_balance))
+	        ver_balance -= v_receiving_transfers[t_r_index].amount
+	        t_r_index += 1
+	        continue
+	    except IndexError:
+	      pass
+	    try:
+	      if v_deposits[d_index].date == current_date:
+	        t_list.append((v_deposits[d_index], unv_balance, ver_balance))
+	        ver_balance -= v_deposits[d_index].amount
+	        d_index += 1
+	        continue
+	    except IndexError:
+	      pass
+	    current_date -= timedelta(days=1)
+	  return (t_list, ver_balance)
+	
 	"""
 	Adjusts verified account balance based on passed transaction amount to be
 	verified (added/subtracted based on account and transaction types)
@@ -399,7 +570,7 @@ class Paycheck(db.Model):
 	
 	def GetTransfersTotal(self):
 	  total = 0
-	  transfers = self.paycheck_transfers
+	  transfers = self.GetAllTransfers()
 	  for transfer in transfers:
 	    total += transfer.amount
 	  return total
@@ -409,7 +580,7 @@ class Paycheck(db.Model):
 	
 	def GetDepositsTotal(self):
 	  total = 0
-	  deposits = self.paycheck_deposits.filter('is_paycheck_deposit !=', True)
+	  deposits = self.GetDepositsTotal()
 	  for deposit in deposits:
 	    total += deposit.amount
 	  return total
@@ -419,7 +590,7 @@ class Paycheck(db.Model):
 	
 	def GetExpensesTotal(self):
 	  total = 0
-	  for expense in self.paycheck_expenses:
+	  for expense in self.GetAllExpenses():
 	    total += expense.amount
 	  return total
 	
@@ -515,6 +686,26 @@ class Transaction(db.Model):
 	  elif Transfer.get_by_key_name(key_name):
 	    transaction = Transfer.get_by_key_name(key_name)
 	  return transaction
+	
+	@classmethod
+	def GetAllTransactionsFromAccount(cls, account):
+	  return cls.all().filter('account =', account).order('date').fetch(100)
+	
+	def GetClassName(self):
+	  return self.__class__.__name__
+	
+	def GetNewAccountBalanceAfterRemoval(self, amount, account):
+	  if self.GetClassName() == 'Expense' or (self.GetClassName() == 'Transfer' and self.receiving_account.key() != account.key()):
+	    if account.a_type == 'Credit Card':
+	      return_amount = amount - self.amount
+	    else:
+	      return_amount = amount + self.amount
+	  else:
+	    if account.a_type == 'Credit Card':
+	      return_amount = amount + self.amount
+	    else:
+	      return_amount = amount - self.amount
+	  return return_amount
 
 class Expense(Transaction):
 	paid = db.BooleanProperty()

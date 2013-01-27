@@ -20,6 +20,32 @@ indexes:
   - name: parent_cat
   - name: name
 
+- kind: Deposit
+  properties:
+  - name: account
+  - name: date
+    direction: desc
+
+- kind: Deposit
+  properties:
+  - name: account
+  - name: verified
+  - name: date
+    direction: desc
+
+- kind: Expense
+  properties:
+  - name: account
+  - name: date
+    direction: desc
+
+- kind: Expense
+  properties:
+  - name: account
+  - name: verified
+  - name: date
+    direction: desc
+
 - kind: Expense
   properties:
   - name: parent_e_category
@@ -55,3 +81,62 @@ indexes:
   properties:
   - name: paycheck2
   - name: tax_type
+
+- kind: Transaction
+  properties:
+  - name: __class__.__name__
+  - name: paycheck
+  - name: parent_e_category
+
+- kind: Transaction
+  properties:
+  - name: account
+  - name: date
+
+- kind: Transaction
+  properties:
+  - name: class
+  - name: paycheck
+  - name: date
+
+- kind: Transaction
+  properties:
+  - name: parent_e_category
+  - name: paycheck
+  - name: vendor
+
+- kind: Transaction
+  properties:
+  - name: paycheck
+  - name: parent_e_category
+
+- kind: Transaction
+  properties:
+  - name: paycheck
+  - name: tax_type
+
+- kind: Transfer
+  properties:
+  - name: origin_account
+  - name: date
+    direction: desc
+
+- kind: Transfer
+  properties:
+  - name: origin_account
+  - name: verified
+  - name: date
+    direction: desc
+
+- kind: Transfer
+  properties:
+  - name: receiving_account
+  - name: date
+    direction: desc
+
+- kind: Transfer
+  properties:
+  - name: receiving_account
+  - name: verified
+  - name: date
+    direction: desc

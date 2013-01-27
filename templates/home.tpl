@@ -24,7 +24,7 @@ function subcatSelectionDisplay() {
 {% if accounts %}
 <h2>Active Accounts</h2>
 {% for account in accounts %}
-<p><strong>{{ account.name }}</strong>: ${{ account.unv_balance|floatformat:"2" }} <em>(last verified {{ account.last_verified }})</em></p>
+<p><strong><a href="/account/detail/{{ account.key }}">{{ account.name }}</a></strong>: ${{ account.unv_balance|floatformat:"2" }} <em>(last verified {{ account.last_verified }})</em></p>
 {% empty %}
 <p><em>No accounts in the database.</em></p>
 {% endfor %}

@@ -156,9 +156,9 @@ class PaycheckDetail(webapp2.RequestHandler):
 
 class CreateAccount(webapp2.RequestHandler):
 	def get(self):
-		template_values = { 'accounts': mydb.Account.GetAllAccounts() }
-		path = os.path.join(os.path.dirname(__file__), 'templates/account.tpl')
-		self.response.out.write(template.render(path, template_values))
+	  template_values = { 'accounts': mydb.Account.GetAllAccounts() }
+	  path = os.path.join(os.path.dirname(__file__), 'templates/account.tpl')
+	  self.response.out.write(template.render(path, template_values))
 		
 	def post(self):
 	  account_args = {'name': self.request.get('name'),
@@ -170,6 +170,20 @@ class CreateAccount(webapp2.RequestHandler):
 	  
 	  logging.info('Redirecting to: ' + self.request.url)
 	  self.redirect(self.request.url)
+
+class AccountDetail(webapp2.RequestHandler):
+  def get(self):
+    # get account
+    a_key = db.Key(self.request.path.split('/')[-1])
+    account = db.get(a_key)
+    
+    transaction_data = account.GetRecentTransactionBalanceList()
+    
+    template_values = {'account': account,
+                       'transactions': transaction_data[0],
+                       'starting': transaction_data[1]}
+    path = os.path.join(os.path.dirname(__file__), 'templates/accountdetail.tpl')
+    self.response.out.write(template.render(path, template_values))
 
 class CreateCategories(webapp2.RequestHandler):
   def get(self):
