@@ -106,12 +106,28 @@ form.delete button {
   <input type="submit" value="Submit">
 </form>
 <p><strong>AFTER DEDUCTIONS</strong>: ${{ paycheck.after_deduction_balance|floatformat:"2" }}</p>
+<p>Other Deposits:</p>
+<ul>
+	{% for d in deposits %}
+	<li><strong>{{ d.source }}:</strong> ${{ d.amount|floatformat:"2"}} - {{ d.description }} <form class="delete" action="" method="post"><input type="hidden" name="delete-key" value="{{ d.key.name }}" /><button type="submit">Delete</button></form> {% if d.verified %}<strong style="font-size:50%;">VERIFIED</strong>{% else %}<form class="delete" action="" method="post"><input type="hidden" name="verify-key" value="{{ d.key.name }}" /><button type="submit">Verify</button></form>{% endif %}</li>
+	{% empty %}
+	<li>No deposits entered.</li>
+	{% endfor %}
+</ul>
+<p><strong>Total deposits:</strong> ${{ deposits_total|floatformat:"2" }}</p>
+<form action="" method="post">
+	Source: <input type="text" name="deposit-source"><br />
+  Amount: <input type="text" name="deposit-amount"><br />
+  Date: <input type="text" name="deposit-date"><br />
+  Description: <input type="text" name="deposit-description"><br />
+	<input type="submit" value="Submit">
+</form>
 <p>Transfers:</p>
 <ul>
   {% for t in transfers %}
 	<li><strong>{{ t.receiving_account.name }}:</strong> ${{ t.amount|floatformat:"2"}} - {{ t.description }} <form class="delete" action="" method="post"><input type="hidden" name="delete-key" value="{{ t.key.name }}" /><button type="submit">Delete</button></form> {% if t.verified %}<strong style="font-size:50%;">VERIFIED</strong>{% else %}<form class="delete" action="" method="post"><input type="hidden" name="verify-key" value="{{ t.key.name }}" /><button type="submit">Verify</button></form>{% endif %}</li>
 	{% empty %}
-	<li>No deposits entered</li>
+	<li>No transfers entered</li>
 	{% endfor %}
 </ul>
 <p><strong>Total transfers:</strong> ${{ transfers_total|floatformat:"2" }}</p>

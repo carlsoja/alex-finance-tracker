@@ -92,6 +92,8 @@ class PaycheckDetail(webapp2.RequestHandler):
                         'deductions': paycheck.GetOtherDeductions(),
                         'deductions_total': paycheck.GetDeductionsTotal(),
                         'accounts': mydb.Account.GetAllNonCheckingAccounts(),
+                        'deposits': paycheck.GetAllOtherDeposits(),
+                        'deposits_total': paycheck.GetOtherDepositsTotal(),
                         'transfers': paycheck.GetAllTransfers(),
                         'transfers_total': paycheck.GetTransfersTotal(),
                         'payment_accounts': mydb.Account.GetAllPaymentAccounts(),
@@ -128,6 +130,12 @@ class PaycheckDetail(webapp2.RequestHandler):
                      'deduct-type': self.request.get('deduction-type'),
                      'name': self.request.get('deduction-name') }
       paycheck.AddNewDeduction(**deduct_args)
+    elif self.request.get('deposit-source') is not '':
+      deposit_args = {'date': self.request.get('deposit-date'),
+                      'amount': self.request.get('deposit-amount'),
+                      'source': self.request.get('deposit-source'),
+                      'description': self.request.get('deposit-description')}
+      paycheck.AddNewDeposit(**deposit_args)
     elif self.request.get('transfer-account') is not '':
       rec_account_keyname = self.request.get('transfer-account')
       transfer_args = {'date': paycheck.date.isoformat(),

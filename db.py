@@ -487,6 +487,17 @@ class Paycheck(db.Model):
 	  self.put()
 	  return self
 	
+	def AddNewDeposit(self, **kwargs):
+	  # create new deposit entity
+	  kwargs['paycheck'] = self
+	  kwargs['account'] = self.dest_account
+	  d = Deposit.CreateNewDeposit(**kwargs)
+	  # adjust paycheck balances
+	  self.after_transfer_balance += d.amount
+	  self.final_balance += d.amount
+	  self.put()
+	  return self
+	
 	def AddNewTransfer(self, **kwargs):
 	  # create new transfer entity
 	  kwargs['paycheck_key'] = self.key()
@@ -494,9 +505,6 @@ class Paycheck(db.Model):
 	  # adjust paycheck balances
 	  self.after_transfer_balance -= t.amount
 	  self.final_balance -= t.amount
-	  # adjust account balances
-	  t.origin_account.AdjustBalanceToAddTransaction(t)
-	  t.receiving_account.AdjustBalanceToAddTransaction(t)
 	  self.put()
 	  return self
 	
@@ -564,6 +572,16 @@ class Paycheck(db.Model):
 	
 	def GetOtherDeductions(self):
 	  return self.paycheck_deductions.filter('deduct_type =', 'Other').fetch(100)
+	
+	def GetAllOtherDeposits(self):
+	  return self.paycheck_deposits.filter('is_paycheck_deposit =', False).fetch(100)
+	
+	def GetOtherDepositsTotal(self):
+	  total = 0
+	  deposits = self.GetAllOtherDeposits()
+	  for deposit in deposits:
+	    total += deposit.amount
+	  return total
 	
 	def GetAllTransfers(self):
 	  return self.paycheck_transfers
@@ -634,9 +652,15 @@ class Paycheck(db.Model):
 	  # retrieve transaction from DB
 	  transaction = Transaction.GetTransaction(key_name)
 	  # edit paycheck balances and deposit entity amount (if transaction is tax or deduction)
-	  self.final_balance += transaction.amount
+	  if transaction.__class__.__name__ is 'Deposit':
+	    self.final_balance -= transaction.amount
+	  else:
+	    self.final_balance += transaction.amount
 	  if transaction.__class__.__name__ is not 'Expense':
-	    self.after_transfer_balance += transaction.amount
+	    if transaction.__class__.__name__ is 'Deposit':
+	      self.after_transfer_balance -= transaction.amount
+	    else:
+	      self.after_transfer_balance += transaction.amount
 	    if transaction.__class__.__name__ in ['Tax', 'Deduction']:
 	      self.after_deduction_balance += transaction.amount
 	      self.deposit_entity.EditPaycheckDepositAmount(transaction.amount)
@@ -706,6 +730,13 @@ class Transaction(db.Model):
 	    else:
 	      return_amount = amount - self.amount
 	  return return_amount
+	
+	def Verify(self):
+	  if self.verified != True:
+	    self.account.AdjustBalanceToVerifyTransaction(self)
+	    self.verified = True
+	    self.put()
+	  return self
 
 class Expense(Transaction):
 	paid = db.BooleanProperty()
@@ -771,13 +802,6 @@ class Expense(Transaction):
 	@classmethod
 	def GetUnassignedExpenses(cls):
 	  return cls.all().filter('paycheck =', None).order('date')
-	
-	def Verify(self):
-	  if self.verified != True:
-	    self.account.AdjustBalanceToVerifyTransaction(self)
-	    self.verified = True
-	    self.put()
-	  return self
 
 class Tax(Transaction):
   tax_type = db.StringProperty(
@@ -867,8 +891,9 @@ class Deduction(Transaction):
     return db.get(d.put())
 
 class Deposit(Transaction):
+	source = db.StringProperty()
 	d_type = db.StringProperty(
-	  choices = set(['Paycheck', 'Savings', 'Investment', 'Retirement']),
+	  choices = set(['Paycheck', 'Other']),
 	  default = 'Savings')
 	is_paycheck_deposit = db.BooleanProperty()
 	paycheck = db.ReferenceProperty(Paycheck,
@@ -879,17 +904,16 @@ class Deposit(Transaction):
 	"""
 	Deposit keyname formats:
 	  Initial Paycheck Deposit - yyyy-mm-dd-<ACCOUNTID>-<GROSSAMOUNT>-paycheckdeposit
-	  Deposit - yyyy-mm-dd-<ORIGINACCOUNTID>-<RECACCOUNTID>-<AMOUNT>-deposit
+	  Deposit - yyyy-mm-dd-<SOURCE>-<AMOUNT>-deposit
 	"""
 	@staticmethod
-	def CreateKeyname(date, type, **kwargs):
-	  key_name = date + '-'
+	def CreateKeyname(d_date, type, **kwargs):
+	  key_name = d_date + '-'
 	  if type == 'paycheckdeposit':
 	    key_name += kwargs['account'] + '-'
 	    key_name += kwargs['gross'] + '-'
 	  elif type == 'deposit':
-	    key_name += kwargs['originaccount'] + '-'
-	    key_name += kwarts['receivingaccount'] + '-'
+	    key_name += kwargs['source'] + '-'
 	    key_name += kwargs['amount'] + '-'
 	  key_name += type
 	  return CleanKeyName(key_name)
@@ -901,18 +925,44 @@ class Deposit(Transaction):
 	    keyname_args = {'account': kwargs['account_key_name'],
 	                    'gross': kwargs['gross']}
 	    key_name = Deposit.CreateKeyname(kwargs['date'], 'paycheckdeposit', **keyname_args)
-	    new_deposit = Deposit(key_name=key_name)
+	    new_deposit = Deposit(key_name=key_name, d_type='Paycheck')
 	    new_deposit.date = DateFromString(kwargs['date'])
 	    new_deposit.amount = kwargs['after_deduction_balance']
 	    new_deposit.description = 'General after-deduction deposit for '
-	    new_deposit.description += new_deposit.date.isoformat() + ' paycheck'
+	    new_deposit.description += str(new_deposit.date) + ' paycheck'
 	    new_deposit.account = kwargs['account']
-	    new_deposit.d_type = 'Paycheck'
+	    new_deposit.source = 'Paycheck'
+	    new_deposit.is_paycheck_deposit = True
 	    new_deposit.paycheck = kwargs['paycheck']
 	    new_deposit.frequency = 'Core'
-	    new_deposit.name = new_deposit.date.isoformat() + ' Paycheck Deposit - '
+	    new_deposit.name = str(new_deposit.date) + ' Paycheck Deposit - '
 	    new_deposit.name += new_deposit.account.name
 	    new_deposit.verified = True
+	    deposit = db.get(new_deposit.put())
+	    # update account unverified balance
+	    deposit.account.AdjustBalanceToAddTransaction(deposit)
+	    return deposit
+	  except KeyError as error:
+	    logging.info('ERROR: ' + str(error))
+	    return False
+	
+	@staticmethod
+	def CreateNewDeposit(**kwargs):
+	  try:
+	    # create new deposit entity
+	    key_name = Deposit.CreateKeyname(kwargs['date'], 'deposit', **kwargs)
+	    new_deposit = Deposit(key_name=key_name, d_type='Other')
+	    new_deposit.date = DateFromString(kwargs['date'])
+	    new_deposit.amount = float(kwargs['amount'])
+	    new_deposit.source = kwargs['source']
+	    new_deposit.description = kwargs['description']
+	    new_deposit.name = 'Deposit from ' + new_deposit.source
+	    new_deposit.account = kwargs['account']
+	    new_deposit.d_type = 'Other'
+	    new_deposit.is_paycheck_deposit = False
+	    new_deposit.paycheck = kwargs['paycheck']
+	    new_deposit.frequency = 'One-Time'
+	    new_deposit.verified = False
 	    deposit = db.get(new_deposit.put())
 	    # update account unverified balance
 	    deposit.account.AdjustBalanceToAddTransaction(deposit)
@@ -967,7 +1017,11 @@ class Transfer(Transaction):
     t.origin_account = kwargs['origin-account']
     t.receiving_account = kwargs['rec-account']
     t.paycheck = db.get(kwargs['paycheck_key'])
-    return db.get(t.put())
+    transfer = db.get(t.put())
+    # adjust account balances
+    transfer.origin_account.AdjustBalanceToAddTransaction(transfer)
+    transfer.receiving_account.AdjustBalanceToAddTransaction(transfer)
+    return transfer
   
   def Verify(self):
     if self.verified != True:
