@@ -52,9 +52,15 @@ form.delete button {
 {% block main %}
 <p><a href="/">Home</a> > {{ paycheck.date }} Paycheck</p>
 <h2>{{ paycheck.date}} Paycheck</h2>
-<p><strong>ACCOUNT</strong>: {{ paycheck.dest_account.name }}</p>
+<p><strong>DEPOSIT ACCOUNT</strong>: {{ paycheck.dest_account.name }}</p>
+<h3>Current Account Balances</h3>
+<ul>
+	{% for b in balances %}
+	<li>{{ b.account.name }}: ${{ b.balance|floatformat:"2" }}
+	{% endfor %}
+</ul>
 <p><strong>GROSS</strong>: ${{ paycheck.gross|floatformat:"2" }}</p>
-<p>Taxes:</p>
+<h3>Taxes</h3>
 <ul>
 	<li><strong>FEDERAL:</strong> {% if federal_tax %}${{ federal_tax.amount|floatformat:"2" }}  <form class="delete" action="" method="post"><input type="hidden" name="delete-key" value="{{ federal_tax.key.name }}" /><button type="submit">Delete</button></form>{% else %}<em>Not entered</em>{% endif %}
   <li><strong>STATE:</strong> {% if state_tax %}${{ state_tax.amount|floatformat:"2" }}  <form class="delete" action="" method="post"><input type="hidden" name="delete-key" value="{{ state_tax.key.name }}" /><button type="submit">Delete</button></form>{% else %}<em>Not entered</em>{% endif %}
@@ -77,7 +83,7 @@ form.delete button {
   Amount: <input type="text" name="tax-amount">
   <input type="submit" value="Submit">
 </form>
-<p>Deductions:</p>
+<h3>Deductions</h3>
 <ul>
 	<li><strong>MEDICAL:</strong> {% if med_insurance %}${{ med_insurance.amount|floatformat:"2" }}  <form class="delete" action="" method="post"><input type="hidden" name="delete-key" value="{{ med_insurance.key.name }}" /><button type="submit">Delete</button></form>{% else %}<em>Not entered</em>{% endif %}
 	<li><strong>DENTAL:</strong> {% if dental_insurance %}${{ dental_insurance.amount|floatformat:"2" }}  <form class="delete" action="" method="post"><input type="hidden" name="delete-key" value="{{ dental_insurance.key.name }}" /><button type="submit">Delete</button></form>{% else %}<em>Not entered</em>{% endif %}
@@ -106,7 +112,7 @@ form.delete button {
   <input type="submit" value="Submit">
 </form>
 <p><strong>AFTER DEDUCTIONS</strong>: ${{ paycheck.after_deduction_balance|floatformat:"2" }}</p>
-<p>Other Deposits:</p>
+<h3>Other Deposits</h3>
 <ul>
 	{% for d in deposits %}
 	<li><strong>{{ d.source }}:</strong> ${{ d.amount|floatformat:"2"}} - {{ d.description }} <form class="delete" action="" method="post"><input type="hidden" name="delete-key" value="{{ d.key.name }}" /><button type="submit">Delete</button></form> {% if d.verified %}<strong style="font-size:50%;">VERIFIED</strong>{% else %}<form class="delete" action="" method="post"><input type="hidden" name="verify-key" value="{{ d.key.name }}" /><button type="submit">Verify</button></form>{% endif %}</li>
@@ -122,7 +128,7 @@ form.delete button {
   Description: <input type="text" name="deposit-description"><br />
 	<input type="submit" value="Submit">
 </form>
-<p>Transfers:</p>
+<h3>Transfers</h3>
 <ul>
   {% for t in transfers %}
 	<li><strong>{{ t.receiving_account.name }}:</strong> ${{ t.amount|floatformat:"2"}} - {{ t.description }} <form class="delete" action="" method="post"><input type="hidden" name="delete-key" value="{{ t.key.name }}" /><button type="submit">Delete</button></form> {% if t.verified %}<strong style="font-size:50%;">VERIFIED</strong>{% else %}<form class="delete" action="" method="post"><input type="hidden" name="verify-key" value="{{ t.key.name }}" /><button type="submit">Verify</button></form>{% endif %}</li>
@@ -143,7 +149,7 @@ form.delete button {
 	<input type="submit" value="Submit">
 </form>
 <p><strong>AFTER TRANSFERS</strong>: ${{ paycheck.after_transfer_balance|floatformat:"2" }}</p>
-<p>Expenses:</p>
+<h3>Expenses</h3>
 <ul>
 	<li>Food &amp; Dining: ${{ food_expenses_total|floatformat:"2" }}
 		<ul>

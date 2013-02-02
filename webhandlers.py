@@ -103,7 +103,8 @@ class PaycheckDetail(webapp2.RequestHandler):
                         'food_expenses_total': paycheck.GetFoodExpensesTotal(),
                         'other_expenses': paycheck.GetAllMiscExpenses(),
                         'other_expenses_total': paycheck.GetMiscExpensesTotal(),
-                        'all_expenses_total': paycheck.GetExpensesTotal() }
+                        'all_expenses_total': paycheck.GetExpensesTotal(),
+                        'balances': paycheck.GetAccountBalances()}
     path = os.path.join(os.path.dirname(__file__), 'templates/paycheckdetail.tpl')
     self.response.out.write(template.render(path, template_values))
   
@@ -148,7 +149,7 @@ class PaycheckDetail(webapp2.RequestHandler):
       account_key = self.request.get('expense-account')
       parent_key = self.request.get('parent-cat')
       child_key = self.request.get('child-' + parent_key)
-      expense_args = {'date': paycheck.date.isoformat(),
+      expense_args = {'date': self.request.get('expense-date'),
                       'amount': self.request.get('expense-amount'),
                       'vendor': self.request.get('expense-vendor'),
                       'description': self.request.get('expense-description'),
@@ -185,11 +186,13 @@ class AccountDetail(webapp2.RequestHandler):
     a_key = db.Key(self.request.path.split('/')[-1])
     account = db.get(a_key)
     
-    transaction_data = account.GetRecentTransactionBalanceList()
+    unv_transaction_data = account.GetRecentUnvTransactionBalanceList()
+    ver_transaction_data = account.GetRecentVerTransactionBalanceList()
     
     template_values = {'account': account,
-                       'transactions': transaction_data[0],
-                       'starting': transaction_data[1]}
+                       'unv_transactions': unv_transaction_data[0],
+                       'ver_transactions': ver_transaction_data[0],
+                       'starting': ver_transaction_data[1]}
     path = os.path.join(os.path.dirname(__file__), 'templates/accountdetail.tpl')
     self.response.out.write(template.render(path, template_values))
 

@@ -72,6 +72,16 @@ indexes:
   - name: date
     direction: desc
 
+- kind: PaycheckAccountBalance
+  properties:
+  - name: account
+  - name: date
+
+- kind: PaycheckAccountBalance
+  properties:
+  - name: paycheck
+  - name: account
+
 - kind: Tax
   properties:
   - name: paycheck
