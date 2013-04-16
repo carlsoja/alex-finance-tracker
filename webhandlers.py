@@ -163,6 +163,21 @@ class PaycheckDetail(webapp2.RequestHandler):
     logging.info('Redirecting to: ' + self.request.url)
     self.redirect(self.request.url)
 
+class PaycheckClose(webapp2.RequestHandler):
+  def get(self):
+    # get current paycheck
+    p_key = db.Key(self.request.path.split('/')[-1])
+    paycheck = db.get(p_key)
+    
+    # TODO: get all paycheck and account balances to display
+    
+    template_values = { 'paycheck': paycheck,
+                        'unv_deposits': paycheck.GetAllUnverifiedDeposits(),
+                        'unv_expenses': paycheck.GetAllUnverifiedExpenses(),
+                        'cc_expenses': paycheck.GetAllCreditCardExpenses() }
+    path = os.path.join(os.path.dirname(__file__), 'templates/paycheckdetail.tpl')
+    self.response.out.write(template.render(path, template_values))
+
 class CreateAccount(webapp2.RequestHandler):
 	def get(self):
 	  template_values = { 'accounts': mydb.Account.GetAllAccounts() }

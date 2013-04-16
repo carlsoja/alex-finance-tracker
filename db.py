@@ -7,6 +7,7 @@ from datetime import datetime
 from datetime import timedelta
 from google.appengine.ext import db
 
+# TODO: Split out Accounts into separate entities by type (Checking, Savings, Credit Card)
 class Account(db.Model):
 	name = db.StringProperty()
 	a_type = db.StringProperty(
@@ -19,6 +20,7 @@ class Account(db.Model):
 	"""
 	Account keyname format: "<name>-<type>-account"
 	"""
+	# tests implemented
 	@staticmethod
 	def CreateKeyname(name, type):
 	  key_name = name + '-'
@@ -26,6 +28,7 @@ class Account(db.Model):
 	  key_name += 'account'
 	  return CleanKeyName(key_name)
 	
+	# tests implemented
 	@staticmethod
 	def CreateNewAccount(**kwargs):
 	  # create new account entity
@@ -43,27 +46,41 @@ class Account(db.Model):
 	    p_a = PaycheckAccountBalance.CreatePaycheckAccountBalance(a, p, a.ver_balance)
 	  return db.get(a.put())
 	
+	# stubbed tests implemented
 	@classmethod
 	def GetAllAccounts(cls):
 	  return cls.all()
 	
+	# stubbed tests implemented
 	@classmethod
 	def GetAllPaymentAccounts(cls):
 	  return cls.all().filter('a_type IN', ['Checking', 'Credit Card']).order('a_type')
 	
+	# stubbed tests implemented
 	@classmethod
 	def GetAllNonCheckingAccounts(cls):
 	  return cls.all().filter('a_type !=', 'Checking')
 	
+	# stubbed tests implemented
 	@classmethod
 	def GetAllCheckingSavingsAccounts(cls):
 	  return cls.all().filter('a_type IN', ['Checking', 'Savings'])
 	
+	# stubbed tests implemented
+	@classmethod
+	def GetAllCreditCardAccounts(cls):
+	  return cls.all().filter('a_type =', 'Credit Card')
+	
+	# stubbed tests implemented
 	@classmethod
 	def GetActiveAccountsAfterDate(cls, start_date):
 	  date_to_use = DateFromString(start_date)
-	  return cls.all().filter('start_date <=', date_to_use)
+	  if date_to_use is None:
+	    return None
+	  else:
+	    return cls.all().filter('start_date >=', date_to_use)
 	
+	# stubbed tests implemented
 	@classmethod
 	def GetTotalUnvBalanceFromAllAccounts(cls):
 	  total = 0
@@ -74,53 +91,61 @@ class Account(db.Model):
 	      total -= a.unv_balance
 	  return total
 	
+	# stubbed tests implemented
 	def GetAllExpensesFromAccount(self):
 	  try:
-	    return self.account_expenses.order('-date').fetch(100)
+	    return self.account_expenses.order('-date')
 	  except IndexError:
 	    return None
 	
+	# stubbed tests implemented
 	def GetAllUnverifiedExpensesFromAccount(self):
 	  try:
-	    return self.account_expenses.filter('verified =', False).order('-date').fetch(100)
+	    return self.account_expenses.filter('verified =', False).order('-date')
 	  except IndexError:
 	    return None
 	
+	# stubbed tests implemented
 	def GetAllVerifiedExpensesFromAccount(self):
 	  try:
-	    return self.account_expenses.filter('verified =', True).order('-date').fetch(100)
+	    return self.account_expenses.filter('verified =', True).order('-date')
 	  except IndexError:
 	    return None
 	
+	# stubbed tests implemented
 	def GetAllVerifiedExpensesFromAccountAfterDate(self, date):
 	  try:
 	    q = self.account_expenses.filter('verified =', True)
-	    return q.filter('date >', DateFromString(date)).order('-date').fetch(100)
+	    return q.filter('date >', DateFromString(date)).order('-date')
 	  except IndexError:
 	    return None
 	
+	# stubbed tests implemented
 	def GetAllDepositsFromAccount(self):
 	  try:
-	    return self.account_deposits.order('-date').fetch(100)
+	    return self.account_deposits.order('-date')
 	  except IndexError:
 	    return None
 	
+	# stubbed tests implemented
 	def GetAllUnverifiedDepositsFromAccount(self):
 	  try:
-	    return self.account_deposits.filter('verified =', False).order('-date').fetch(100)
+	    return self.account_deposits.filter('verified =', False).order('-date')
 	  except IndexError:
 	    return None
 	
+	# stubbed tests implemented
 	def GetAllVerifiedDepositsFromAccount(self):
 	  try:
-	    return self.account_deposits.filter('verified =', True).order('-date').fetch(100)
+	    return self.account_deposits.filter('verified =', True).order('-date')
 	  except IndexError:
 	    return None
 	
+	# stubbed tests implemented
 	def GetAllVerifiedDepositsFromAccountAfterDate(self, date):
 	  try:
 	    q = self.account_deposits.filter('verified =', True)
-	    return q.filter('date >', DateFromString(date)).order('-date').fetch(100)
+	    return q.filter('date >', DateFromString(date)).order('-date')
 	  except IndexError:
 	    return None
 	
@@ -174,6 +199,12 @@ class Account(db.Model):
 	  except IndexError:
 	    return None
 	
+	"""
+	  Takes current verified balance and then subtracts/adds to it from each transaction
+	  on or after the specified date (depending on the type of transaction) so we can 
+	  know what the account balance was on that date.
+	"""
+	# stubbed tests implemented
 	def CalculateBalanceAfterDate(self, date):
 	  balance = self.ver_balance
 	  expenses = self.GetAllVerifiedExpensesFromAccountAfterDate(date)
@@ -207,24 +238,24 @@ class Account(db.Model):
 	  t_o_index = 0
 	  t_r_index = 0
 	  d_index = 0
-	  if len(u_expenses) == 0: e_end = True
+	  if u_expenses.count() == 0: e_end = True
 	  else: e_end = False
 	  if len(u_origin_transfers) == 0: t_o_end = True
 	  else: t_o_end = False
 	  if len(u_receiving_transfers) == 0: t_r_end = True
 	  else: t_r_end = False
-	  if len(u_deposits) == 0: d_end = True
+	  if u_deposits.count() == 0: d_end = True
 	  else: d_end = False
 	  # unverified transactions to t_list in date/type order
 	  while((e_end and t_o_end and t_r_end and d_end) != True):
-	    logging.info('TEST: ' + str(e_end and t_o_end and t_r_end and d_end))
+	    #logging.info('TEST: ' + str(e_end and t_o_end and t_r_end and d_end))
 	    try:
 	      if e_end != True and u_expenses[e_index].date == current_date:
 	        t_list.append((u_expenses[e_index], unv_balance))
 	        unv_balance += u_expenses[e_index].amount
 	        e_index += 1
-	        logging.info('e_index: '+ str(e_index) + ', len: ' + str(len(u_expenses)))
-	        if e_index == len(u_expenses):
+	        #logging.info('e_index: '+ str(e_index) + ', len: ' + str(u_expenses.count()))
+	        if e_index == u_expenses.count():
 	          e_end = True
 	        continue
 	    except IndexError:
@@ -234,7 +265,7 @@ class Account(db.Model):
 	        t_list.append((u_origin_transfers[t_o_index], unv_balance))
 	        unv_balance += u_origin_transfers[t_o_index].amount
 	        t_o_index += 1
-	        logging.info('t_o_index: '+ str(t_o_index) + ', len: ' + str(len(u_origin_transfers)))
+	        #logging.info('t_o_index: '+ str(t_o_index) + ', len: ' + str(len(u_origin_transfers)))
 	        if t_o_index == len(u_origin_transfers):
 	          t_o_end = True
 	        continue
@@ -245,7 +276,7 @@ class Account(db.Model):
 	        t_list.append((u_receiving_transfers[t_r_index], unv_balance))
 	        unv_balance -= u_receiving_transfers[t_r_index].amount
 	        t_r_index += 1
-	        logging.info('t_r_index: '+ str(t_r_index) + ', len: ' + str(len(u_receiving_transfers)))
+	        #logging.info('t_r_index: '+ str(t_r_index) + ', len: ' + str(len(u_receiving_transfers)))
 	        if t_r_index == len(u_receiving_transfers):
 	          t_r_end = True
 	        continue
@@ -256,8 +287,8 @@ class Account(db.Model):
 	        t_list.append((u_deposits[d_index], unv_balance))
 	        unv_balance -= u_deposits[d_index].amount
 	        d_index += 1
-	        logging.info('d_index: '+ str(d_index) + ', len: ' + str(len(u_deposits)))
-	        if d_index == len(u_deposits):
+	        #logging.info('d_index: '+ str(d_index) + ', len: ' + str(u_deposits.count()))
+	        if d_index == u_deposits.count():
 	          d_end = True
 	        continue
 	    except IndexError:
@@ -358,7 +389,7 @@ class Account(db.Model):
 	def AdjustBalanceToVerifyTransaction(self, transaction, put=''):
 	  if transaction.__class__.__name__ == 'Expense' or (transaction.__class__.__name__ == 'Transfer' and transaction.receiving_account.key() != self.key()):
 	    if self.a_type == 'Credit Card':
-	      self.ver_balance += transation.amount
+	      self.ver_balance += transaction.amount
 	    else:
 	      self.ver_balance -= transaction.amount
 	  else:
@@ -754,6 +785,25 @@ class Paycheck(db.Model):
 	    total += e.amount
 	  return total
 	
+	def GetAllUnverifiedDeposits(self):
+	  return self.paycheck_deposits.filter('verified =', False).fetch(100)
+	
+	def GetAllUnverifiedExpenses(self):
+	  return self.paycheck_expenses.filter('verified =', False).fetch(100)
+	
+	def GetAllExpensesForCreditCard(self, cc_account):
+	  return self.paycheck_expenses.filter('account =', cc_account).fetch(100)
+	
+	def GetAllCreditCardExpenses(self):
+	  cc_accounts = Account.GetAllCreditCardAccounts()
+	  e_list = []
+	  for index, a in enumerate(cc_accounts):
+	    e_list.append([])
+	    expenses = paycheck.GetAllExpensesForCreditCard(a)
+	    for e in expenses:
+	      e_list[index].append(e)
+	  return e_list
+	
 	def GetAccountBalances(self):
 	  return PaycheckAccountBalance.GetPaycheckAccountBalances(self)
 	
@@ -798,6 +848,45 @@ class Paycheck(db.Model):
 	  self.put()
 	  return self
 
+class CreditCardPayment(db.Model):
+  date = db.DateProperty()
+  total = db.FloatProperty()
+  paycheck = db.ReferenceProperty(Paycheck,
+                                  collection_name='paycheck_cc_payments')
+  credit_card = db.ReferenceProperty(Account,
+                                     collection_name='cc_payments')
+  
+  """
+  CreditCardPayment keyname format: yyyy-mm-dd-<ACCOUNT>-<AMOUNT>-payment
+  """
+  @staticmethod
+  def CreateKeyname(date, account, amount):
+    key_name = date + '-'
+    key_name += account + '-'
+    key_name += amount + '-'
+    key_name += 'payment'
+    return CleanKeyName(key_name)
+  
+  @staticmethod
+  def CreateNewPayment(**kwargs):
+    key_name = CreditCardPayment.CreateKeyname(kwargs['date'], kwargs['account'], kwargs['amount'])
+    payment = CreditCardPayment(key_name=key_name)
+    payment.total = float(kwargs['amount'])
+    payment.date = DateFromString(str(kwargs['date']))
+    payment.paycheck = kwargs['paycheck']
+    payment.credit_card = kwargs['account']
+    # create transfer entity for payment
+    p_description = payment.credit_card.name + ' credit card payment for '
+    p_description += payment.paycheck.date + ' paycheck'
+    transfer_args = {'date': payment.paycheck.date.isoformat(),
+                     'amount': payment.amount,
+                     'origin-account': payment.paycheck.dest_account,
+                     'rec-account': payment.credit_card,
+                     'description': p_description,
+                     'paycheck_key': payment.paycheck}
+    t = Transfer.CreateNewTransfer(**transfer_args)
+    return db.get(payment.put())
+
 class Transaction(db.Model):
 	date = db.DateProperty()
 	name = db.StringProperty()
@@ -808,6 +897,8 @@ class Transaction(db.Model):
 	  default = 'One-Time')
 	recurring_date = db.DateProperty()
 	verified = db.BooleanProperty()
+	payment = db.ReferenceProperty(CreditCardPayment,
+	                               collection_name='cc_payment_transactions')
 	
 	@staticmethod
 	def GetTransaction(key_name):
@@ -889,14 +980,17 @@ class Expense(Transaction):
 	  expense.name = expense.description
 	  expense.amount = float(kwargs['amount'])
 	  expense.frequency = kwargs['frequency']
-	  expense.verified = False
 	  expense.paid = False
 	  if kwargs['parent-cat'].__class__.__name__ is 'Category':
 	    expense.parent_e_category = kwargs['parent-cat']
+	  elif kwargs['parent-cat'] is None:
+	    expense.parent_e_category = None
 	  else:
 	    expense.parent_e_category = Category.get_by_key_name(kwargs['parent-cat'])
 	  if kwargs['child-cat'].__class__.__name__ is 'Category':
 	    expense.child_e_category = kwargs['child-cat']
+	  elif kwargs['child-cat'] is None:
+	    expense.child_e_category = None
 	  else:
 	    expense.child_e_category = Category.get_by_key_name(kwargs['child-cat'])
 	  if kwargs['account'].__class__.__name__ is 'Account':
@@ -907,6 +1001,10 @@ class Expense(Transaction):
 	    expense.paycheck = kwargs['paycheck']
 	  except KeyError:
 	    expense.paycheck = None
+	  try:
+	    expense.verified = kwargs['verified']
+	  except KeyError:
+	    expense.verified = False
 	  # edit related account balance
 	  expense.account.AdjustBalanceToAddTransaction(expense)
 	  PaycheckAccountBalance.AdjustAllBalancesFromAccountAfterDateToAddTransaction(expense.account,
@@ -1071,25 +1169,30 @@ class Deposit(Transaction):
 	  try:
 	    # create new deposit entity
 	    key_name = Deposit.CreateKeyname(kwargs['date'], 'deposit', **kwargs)
-	    new_deposit = Deposit(key_name=key_name, d_type='Other')
-	    new_deposit.date = DateFromString(kwargs['date'])
-	    new_deposit.amount = float(kwargs['amount'])
-	    new_deposit.source = kwargs['source']
-	    new_deposit.description = kwargs['description']
-	    new_deposit.name = 'Deposit from ' + new_deposit.source
-	    new_deposit.account = kwargs['account']
-	    new_deposit.d_type = 'Other'
-	    new_deposit.is_paycheck_deposit = False
-	    new_deposit.paycheck = kwargs['paycheck']
-	    new_deposit.frequency = 'One-Time'
-	    new_deposit.verified = False
-	    deposit = db.get(new_deposit.put())
+	    deposit = Deposit(key_name=key_name, d_type='Other')
+	    deposit.date = DateFromString(kwargs['date'])
+	    deposit.amount = float(kwargs['amount'])
+	    deposit.source = kwargs['source']
+	    deposit.description = kwargs['description']
+	    deposit.name = 'Deposit from ' + deposit.source
+	    deposit.d_type = 'Other'
+	    deposit.is_paycheck_deposit = False
+	    deposit.paycheck = kwargs['paycheck']
+	    deposit.frequency = 'One-Time'
+	    if kwargs['account'].__class__.__name__ is 'Account':
+	      deposit.account = kwargs['account']
+	    else:
+	      deposit.account = Account.get_by_key_name(kwargs['account'])
+	    try:
+	      deposit.verified = kwargs['verified']
+	    except IndexError:
+	      deposit.verified = False
 	    # update account unverified balance and all PaycheckAccountBalance entities after deposit date
 	    deposit.account.AdjustBalanceToAddTransaction(deposit)
 	    PaycheckAccountBalance.AdjustAllBalancesFromAccountAfterDateToAddTransaction(deposit.account,
   	                                                                               deposit.date,
   	                                                                               deposit)
-	    return deposit
+	    return db.get(deposit.put())
 	  except KeyError as error:
 	    logging.info('ERROR: ' + str(error))
 	    return False
@@ -1135,27 +1238,32 @@ class Transfer(Transaction):
   def CreateNewTransfer(**kwargs):
     key_name = Transfer.CreateKeyname(kwargs['date'], kwargs['origin-account'].name,
                                       kwargs['rec-account'].name, kwargs['amount'])
-    t = Transfer(key_name=key_name)
-    t.date = DateFromString(str(kwargs['date']))
-    t.description = kwargs['description']
-    t.name = t.description
-    t.amount = float(kwargs['amount'])
-    t.frequency = 'One-Time'
-    t.verified = False
-    t.origin_account = kwargs['origin-account']
-    t.receiving_account = kwargs['rec-account']
-    t.paycheck = db.get(kwargs['paycheck_key'])
-    transfer = db.get(t.put())
+    transfer = Transfer(key_name=key_name)
+    transfer.date = DateFromString(str(kwargs['date']))
+    transfer.description = kwargs['description']
+    transfer.name = transfer.description
+    transfer.amount = float(kwargs['amount'])
+    transfer.frequency = 'One-Time'
+    transfer.origin_account = kwargs['origin-account']
+    transfer.receiving_account = kwargs['rec-account']
+    try:
+      transfer.paycheck = db.get(kwargs['paycheck_key'])
+    except KeyError:
+      transfer.paycheck = None
+    try:
+      transfer.verified = kwargs['verified']
+    except KeyError:
+      transfer.verified = False
     # adjust account balances
     transfer.origin_account.AdjustBalanceToAddTransaction(transfer)
     transfer.receiving_account.AdjustBalanceToAddTransaction(transfer)
     PaycheckAccountBalance.AdjustAllBalancesFromAccountAfterDateToAddTransaction(transfer.origin_account,
-                                                                                 transfer.paycheck.date,
+                                                                                 transfer.date,
                                                                                  transfer)
     PaycheckAccountBalance.AdjustAllBalancesFromAccountAfterDateToAddTransaction(transfer.receiving_account,
-                                                                                 transfer.paycheck.date,
+                                                                                 transfer.date,
                                                                                  transfer)
-    return transfer
+    return db.get(transfer.put())
 
 # TODO: Decide how to handle unv vs. ver balances
 class PaycheckAccountBalance(db.Model):
@@ -1229,7 +1337,10 @@ class PaycheckAccountBalance(db.Model):
       return False
 
 def DateFromString(string_date):
-  new_date = datetime.strptime(string_date, '%Y-%m-%d')
+  try:
+    new_date = datetime.strptime(string_date, '%Y-%m-%d')
+  except ValueError:
+    return None
   return date(new_date.year, new_date.month, new_date.day)
 
 def CleanKeyName(key_name):
