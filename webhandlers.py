@@ -205,8 +205,8 @@ class AccountDetail(webapp2.RequestHandler):
     ver_transaction_data = account.GetRecentVerTransactionBalanceList()
     
     template_values = {'account': account,
-                       'unv_transactions': unv_transaction_data[0],
-                       'ver_transactions': ver_transaction_data[0],
+                       'unv_transactions': unv_transaction_data,
+                       'ver_transactions': ver_transaction_data,
                        'starting': ver_transaction_data[1]}
     path = os.path.join(os.path.dirname(__file__), 'templates/accountdetail.tpl')
     self.response.out.write(template.render(path, template_values))

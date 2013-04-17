@@ -5,6 +5,7 @@ import db_test_stubs as stubs
 import unittest
 
 from datetime import date
+from datetime import timedelta
 from google.appengine.ext import db
 from google.appengine.ext import testbed
 
@@ -310,7 +311,7 @@ class DbAccountTest(stubs.DbTest):
   
   def testGetAllVerifiedDepositsFromAccountAfterDate(self):
     a = self.addAccountStub()[0]
-    # returns empty query if no expenses
+    # returns empty query if no deposits
     self.assertEqual(a.GetAllVerifiedDepositsFromAccountAfterDate('2012-01-01').count(), 0)
     # returns empty query if only unverified deposits
     self.addDepositStub(a, verified = False)
@@ -323,6 +324,118 @@ class DbAccountTest(stubs.DbTest):
     self.assertEqual(a.GetAllVerifiedDepositsFromAccountAfterDate('2012-01-01').count(), 1)
     self.addDepositStub(a, date = '2013-01-01', verified = True)
     self.assertEqual(a.GetAllVerifiedDepositsFromAccountAfterDate('2012-01-01').count(), 2)
+  
+  def testGetAllTransfersOriginatingFromAccount(self):
+    a = self.addAccountStub()[0]
+    rec_a = self.addAccountStub(type = 'Savings')[0]
+    # returns empty query if no transfers
+    self.assertEqual(a.GetAllTransfersOriginatingFromAccount().count(), 0)
+    # returns proper number of transfers
+    self.addTransferStub(a, rec_a)
+    self.assertEqual(a.GetAllTransfersOriginatingFromAccount().count(), 1)
+    self.addTransferStub(a, rec_a, amount = '50')
+    self.assertEqual(a.GetAllTransfersOriginatingFromAccount().count(), 2)
+  
+  def testGetAllUnverifiedTransfersOriginatingFromAccount(self):
+    a = self.addAccountStub()[0]
+    rec_a = self.addAccountStub(type = 'Savings')[0]
+    # returns empty query if no transfers
+    self.assertEqual(a.GetAllUnverifiedTransfersOriginatingFromAccount().count(), 0)
+    # returns empty query if only verified transfers
+    self.addTransferStub(a, rec_a, verified = True)
+    self.assertEqual(a.GetAllUnverifiedTransfersOriginatingFromAccount().count(), 0)
+    # returns proper number of unverified deposits
+    self.addTransferStub(a, rec_a, amount = '50', verified = False)
+    self.assertEqual(a.GetAllUnverifiedTransfersOriginatingFromAccount().count(), 1)
+    self.addTransferStub(a, rec_a, amount = '75', verified = False)
+    self.assertEqual(a.GetAllUnverifiedTransfersOriginatingFromAccount().count(), 2)
+  
+  def testGetAllVerifiedTransfersOriginatingFromAccount(self):
+    a = self.addAccountStub()[0]
+    rec_a = self.addAccountStub(type = 'Savings')[0]
+    # returns empty query if no transfers
+    self.assertEqual(a.GetAllVerifiedTransfersOriginatingFromAccount().count(), 0)
+    # returns empty query if only unverified transfers
+    self.addTransferStub(a, rec_a, verified = False)
+    self.assertEqual(a.GetAllVerifiedTransfersOriginatingFromAccount().count(), 0)
+    # returns proper number of verified deposits
+    self.addTransferStub(a, rec_a, amount = '50', verified = True)
+    self.assertEqual(a.GetAllVerifiedTransfersOriginatingFromAccount().count(), 1)
+    self.addTransferStub(a, rec_a, amount = '75', verified = True)
+    self.assertEqual(a.GetAllVerifiedTransfersOriginatingFromAccount().count(), 2)
+  
+  def testGetAllVerifiedTransfersOriginatingFromAccountAfterDate(self):
+    a = self.addAccountStub()[0]
+    rec_a = self.addAccountStub(type = 'Savings')[0]
+    # returns empty query if no transfers
+    self.assertEqual(a.GetAllVerifiedTransfersOriginatingFromAccountAfterDate('2012-01-01').count(), 0)
+    # returns empty query if only unverified transfers
+    self.addTransferStub(a, rec_a, verified = False)
+    self.assertEqual(a.GetAllVerifiedTransfersOriginatingFromAccountAfterDate('2012-01-01').count(), 0)
+    # returns empty query if only verified transfers before specified date
+    self.addTransferStub(a, rec_a, date = '2011-01-01', verified = True)
+    self.assertEqual(a.GetAllVerifiedTransfersOriginatingFromAccountAfterDate('2012-01-01').count(), 0)
+    # returns proper number of verified transfers after specified date
+    self.addTransferStub(a, rec_a, date = '2012-01-02', verified = True)
+    self.assertEqual(a.GetAllVerifiedTransfersOriginatingFromAccountAfterDate('2012-01-01').count(), 1)
+    self.addTransferStub(a, rec_a, date = '2013-01-01', verified = True)
+    self.assertEqual(a.GetAllVerifiedTransfersOriginatingFromAccountAfterDate('2012-01-01').count(), 2)
+  
+  def testGetAllTransfersReceivedIntoAccount(self):
+    a = self.addAccountStub()[0]
+    rec_a = self.addAccountStub(type = 'Savings')[0]
+    # returns empty query if no transfers
+    self.assertEqual(a.GetAllTransfersReceivedIntoAccount().count(), 0)
+    # returns proper number of transfers
+    self.addTransferStub(rec_a, a)
+    self.assertEqual(a.GetAllTransfersReceivedIntoAccount().count(), 1)
+    self.addTransferStub(rec_a, a, amount = '50')
+    self.assertEqual(a.GetAllTransfersReceivedIntoAccount().count(), 2)
+  
+  def testGetAllUnverifiedTransfersReceivedIntoAccount(self):
+    a = self.addAccountStub()[0]
+    rec_a = self.addAccountStub(type = 'Savings')[0]
+    # returns empty query if no transfers
+    self.assertEqual(a.GetAllUnverifiedTransfersReceivedIntoAccount().count(), 0)
+    # returns empty query if only verified transfers
+    self.addTransferStub(rec_a, a, verified = True)
+    self.assertEqual(a.GetAllUnverifiedTransfersReceivedIntoAccount().count(), 0)
+    # returns proper number of unverified deposits
+    self.addTransferStub(rec_a, a, amount = '50', verified = False)
+    self.assertEqual(a.GetAllUnverifiedTransfersReceivedIntoAccount().count(), 1)
+    self.addTransferStub(rec_a, a, amount = '75', verified = False)
+    self.assertEqual(a.GetAllUnverifiedTransfersReceivedIntoAccount().count(), 2)
+  
+  def testGetAllVerifiedTransfersReceivedIntoAccount(self):
+    a = self.addAccountStub()[0]
+    rec_a = self.addAccountStub(type = 'Savings')[0]
+    # returns empty query if no transfers
+    self.assertEqual(a.GetAllVerifiedTransfersReceivedIntoAccount().count(), 0)
+    # returns empty query if only unverified transfers
+    self.addTransferStub(rec_a, a, verified = False)
+    self.assertEqual(a.GetAllVerifiedTransfersReceivedIntoAccount().count(), 0)
+    # returns proper number of verified deposits
+    self.addTransferStub(rec_a, a, amount = '50', verified = True)
+    self.assertEqual(a.GetAllVerifiedTransfersReceivedIntoAccount().count(), 1)
+    self.addTransferStub(rec_a, a, amount = '75', verified = True)
+    self.assertEqual(a.GetAllVerifiedTransfersReceivedIntoAccount().count(), 2)
+  
+  def testGetAllVerifiedTransfersReceivingIntoAccountAfterDate(self):
+    a = self.addAccountStub()[0]
+    rec_a = self.addAccountStub(type = 'Savings')[0]
+    # returns empty query if no transfers
+    self.assertEqual(a.GetAllVerifiedTransfersReceivingIntoAccountAfterDate('2012-01-01').count(), 0)
+    # returns empty query if only unverified transfers
+    self.addTransferStub(rec_a, a, verified = False)
+    self.assertEqual(a.GetAllVerifiedTransfersReceivingIntoAccountAfterDate('2012-01-01').count(), 0)
+    # returns empty query if only verified transfers before specified date
+    self.addTransferStub(rec_a, a, date = '2011-01-01', verified = True)
+    self.assertEqual(a.GetAllVerifiedTransfersReceivingIntoAccountAfterDate('2012-01-01').count(), 0)
+    # returns proper number of verified transfers after specified date
+    self.addTransferStub(rec_a, a, date = '2012-01-02', verified = True)
+    self.assertEqual(a.GetAllVerifiedTransfersReceivingIntoAccountAfterDate('2012-01-01').count(), 1)
+    self.addTransferStub(rec_a, a, date = '2013-01-01', verified = True)
+    self.assertEqual(a.GetAllVerifiedTransfersReceivingIntoAccountAfterDate('2012-01-01').count(), 2)
   
   def testCalculateBalanceAfterDate(self):
     a = self.addAccountStub()[0]
@@ -349,44 +462,147 @@ class DbAccountTest(stubs.DbTest):
     rec_a = self.addAccountStub(type = 'Savings')[0]
     # returns tuple with empty list and unchanged balance if no transactions
     test_v = a.GetRecentUnvTransactionBalanceList()
-    self.assertEqual(len(test_v[0]), 0)
-    self.assertEqual(test_v[1], 500)
+    self.assertEqual(len(test_v), 0)
     # counts expenses and appropriately changes balance
     self.addExpenseStub(a, date = '2012-01-01', amount = '100', vendor = 'Testy', verified = False)
     test_v = a.GetRecentUnvTransactionBalanceList()
-    self.assertEqual(len(test_v[0]), 1)
-    self.assertEqual(test_v[0][0][0].vendor, 'Testy')
-    self.assertEqual(test_v[0][0][1], 400)
-    self.assertEqual(test_v[1], 500)
+    self.assertEqual(len(test_v), 1)
+    self.assertEqual(test_v[0][0].vendor, 'Testy')
+    self.assertEqual(test_v[0][1], 400)
     self.addExpenseStub(a, date = '2012-01-02', amount = '50', vendor = 'Testy 2', verified = False)
     test_v = a.GetRecentUnvTransactionBalanceList()
-    self.assertEqual(len(test_v[0]), 2)
-    self.assertEqual(test_v[0][0][0].vendor, 'Testy 2')
-    self.assertEqual(test_v[0][0][1], 350)
-    self.assertEqual(test_v[0][1][0].vendor, 'Testy')
-    self.assertEqual(test_v[0][1][1], 400)
-    self.assertEqual(test_v[1], 500)
+    self.assertEqual(len(test_v), 2)
+    self.assertEqual(test_v[0][0].vendor, 'Testy 2')
+    self.assertEqual(test_v[0][1], 350)
+    self.assertEqual(test_v[1][0].vendor, 'Testy')
+    self.assertEqual(test_v[1][1], 400)
     # counts deposits and appropriately changes balance
     self.addDepositStub(a, date = '2012-01-03', amount = '25', source = 'Testy 3', verified = False)
     test_v = a.GetRecentUnvTransactionBalanceList()
-    self.assertEqual(len(test_v[0]), 3)
-    self.assertEqual(test_v[0][0][0].source, 'Testy 3')
-    self.assertEqual(test_v[0][0][1], 375)
-    self.assertEqual(test_v[0][2][0].vendor, 'Testy')
-    self.assertEqual(test_v[0][2][1], 400)
-    self.assertEqual(test_v[1], 500)
-    # counts transfers and appropriately changes balance
+    self.assertEqual(len(test_v), 3)
+    self.assertEqual(test_v[0][0].source, 'Testy 3')
+    self.assertEqual(test_v[0][1], 375)
+    self.assertEqual(test_v[2][0].vendor, 'Testy')
+    self.assertEqual(test_v[2][1], 400)
+    # counts transfers out of account and appropriately changes balance
     self.addTransferStub(a, rec_a, date = '2012-01-04', description = 'Test Descripty 1',
                         amount = '100', verified = False)
     test_v = a.GetRecentUnvTransactionBalanceList()
-    self.assertEqual(len(test_v[0]), 4)
-    self.assertEqual(test_v[0][0][0].description, 'Test Descripty 1')
-    self.assertEqual(test_v[0][0][1], 275)
-    self.assertEqual(test_v[0][2][0].vendor, 'Testy 2')
-    self.assertEqual(test_v[0][2][1], 350)
-    self.assertEqual(test_v[0][3][0].vendor, 'Testy')
-    self.assertEqual(test_v[0][3][1], 400)
-    self.assertEqual(test_v[1], 500)
+    self.assertEqual(len(test_v), 4)
+    self.assertEqual(test_v[0][0].description, 'Test Descripty 1')
+    self.assertEqual(test_v[0][1], 275)
+    self.assertEqual(test_v[2][0].vendor, 'Testy 2')
+    self.assertEqual(test_v[2][1], 350)
+    self.assertEqual(test_v[3][0].vendor, 'Testy')
+    self.assertEqual(test_v[3][1], 400)
+    # counts transfers into account and appropriately changes balance
+    self.addTransferStub(rec_a, a, date = '2012-01-05', description = 'Test Descripty 2',
+                        amount = '50', verified = False)
+    test_v = a.GetRecentUnvTransactionBalanceList()
+    self.assertEqual(len(test_v), 5)
+    self.assertEqual(test_v[0][0].description, 'Test Descripty 2')
+    self.assertEqual(test_v[0][1], 325)
+    self.assertEqual(test_v[1][0].description, 'Test Descripty 1')
+    self.assertEqual(test_v[1][1], 275)
+    self.assertEqual(test_v[3][0].vendor, 'Testy 2')
+    self.assertEqual(test_v[3][1], 350)
+    self.assertEqual(test_v[4][0].vendor, 'Testy')
+    self.assertEqual(test_v[4][1], 400)
+  
+  def testGetRecentVerTransactionBalanceList(self):
+    a = self.addAccountStub(starting = float(500))[0]
+    rec_a = self.addAccountStub(type = 'Savings')[0]
+    # returns empty list when no transactions in account
+    self.assertEqual(len(a.GetRecentVerTransactionBalanceList(30)), 0)
+    # counts expenses, deposits, and transfers and appropriately changes balance
+    date_to_use = date.today() - timedelta(days=2)
+    self.addExpenseStub(a, date = date_to_use.isoformat(), amount = '100',
+                           vendor = 'Testy', verified = True)
+    test_v = a.GetRecentVerTransactionBalanceList(30)
+    self.assertEqual(len(test_v), 1)
+    self.assertEqual(test_v[0][1], 400)
+    self.assertEqual(test_v[0][0].amount, 100)
+    date_to_use -= timedelta(days=1)
+    self.addDepositStub(a, date = date_to_use.isoformat(), amount = '50',
+                           source = 'Testy 2', verified = True)
+    test_v = a.GetRecentVerTransactionBalanceList(30)
+    self.assertEqual(len(test_v), 2)
+    self.assertEqual(test_v[0][1], 450)
+    self.assertEqual(test_v[0][0].amount, 100)
+    self.assertEqual(test_v[1][1], 550)
+    self.assertEqual(test_v[1][0].amount, 50)
+    date_to_use -= timedelta(days=1)
+    self.addTransferStub(a, rec_a, date_to_use.isoformat(), description = 'Test Descripty 1',
+                        amount = '25', verified = True)
+    test_v = a.GetRecentVerTransactionBalanceList(30)
+    self.assertEqual(len(test_v), 3)
+    self.assertEqual(test_v[0][1], 425)
+    self.assertEqual(test_v[0][0].amount, 100)
+    self.assertEqual(test_v[1][1], 525)
+    self.assertEqual(test_v[1][0].amount, 50)
+    self.assertEqual(test_v[2][1], 475)
+    self.assertEqual(test_v[2][0].amount, 25)
+    date_to_use -= timedelta(days=1)
+    self.addTransferStub(rec_a, a, date_to_use.isoformat(), description = 'Test Descripty 2',
+                        amount = '75', verified = True)
+    test_v = a.GetRecentVerTransactionBalanceList(30)
+    self.assertEqual(len(test_v), 4)
+    self.assertEqual(test_v[0][1], 500)
+    self.assertEqual(test_v[0][0].amount, 100)
+    self.assertEqual(test_v[1][1], 600)
+    self.assertEqual(test_v[1][0].amount, 50)
+    self.assertEqual(test_v[2][1], 550)
+    self.assertEqual(test_v[2][0].amount, 25)
+    self.assertEqual(test_v[3][1], 575)
+    self.assertEqual(test_v[3][0].amount, 75)
+    # doesn't count transactions outside of specified date range
+    date_to_use = date.today() - timedelta(days=31)
+    self.addExpenseStub(a, date = date_to_use.isoformat(), amount = '100',
+                           vendor = 'Testy 5', verified = True)
+    test_v = a.GetRecentVerTransactionBalanceList(30)
+    self.assertEqual(len(test_v), 4)
+  
+  def testGetBalanceAdjustment(self):
+    a = self.addAccountStub()[0]
+    rec_a = self.addAccountStub(type = 'Savings')[0]
+    cc_a = self.addAccountStub(type = 'Credit Card')[0]
+    e = self.addExpenseStub(a)[0]
+    d = self.addDepositStub(a)[0]
+    t_o = self.addTransferStub(a, rec_a)[0]
+    t_i = self.addTransferStub(rec_a, a)[0]
+    t_o_cc = self.addTransferStub(cc_a, rec_a)[0]
+    t_i_cc = self.addTransferStub(rec_a, cc_a)[0]
+    # check different transaction types for non-Credit Card account
+    self.assertEqual(a.GetBalanceAdjustment(e), -100)
+    self.assertEqual(a.GetBalanceAdjustment(d), 100)
+    self.assertEqual(a.GetBalanceAdjustment(t_o), -100)
+    self.assertEqual(a.GetBalanceAdjustment(t_i), 100)
+    # check different transaction types for Credit Card account
+    self.assertEqual(cc_a.GetBalanceAdjustment(e), 100)
+    self.assertEqual(cc_a.GetBalanceAdjustment(d), -100)
+    self.assertEqual(cc_a.GetBalanceAdjustment(t_o_cc), 100)
+    self.assertEqual(cc_a.GetBalanceAdjustment(t_i_cc), -100)
+  
+  def testGetBalanceDifference(self):
+    a = self.addAccountStub()[0]
+    rec_a = self.addAccountStub(type = 'Savings')[0]
+    cc_a = self.addAccountStub(type = 'Credit Card')[0]
+    e = self.addExpenseStub(a)[0]
+    d = self.addDepositStub(a)[0]
+    t_o = self.addTransferStub(a, rec_a)[0]
+    t_i = self.addTransferStub(rec_a, a)[0]
+    t_o_cc = self.addTransferStub(cc_a, rec_a)[0]
+    t_i_cc = self.addTransferStub(rec_a, cc_a)[0]
+    # check different transaction types for non-Credit Card account
+    self.assertEqual(a.GetBalanceDifference(e, 75), -25)
+    self.assertEqual(a.GetBalanceDifference(d, 75), 25)
+    self.assertEqual(a.GetBalanceDifference(t_o, 75), -25)
+    self.assertEqual(a.GetBalanceDifference(t_i, 75), 25)
+    # check different transaction types for Credit Card account
+    self.assertEqual(cc_a.GetBalanceDifference(e, 75), 25)
+    self.assertEqual(cc_a.GetBalanceDifference(d, 75), -25)
+    self.assertEqual(cc_a.GetBalanceDifference(t_o_cc, 75), 25)
+    self.assertEqual(cc_a.GetBalanceDifference(t_i_cc, 75), -25)
   
   def testDateFromString(self):
     good_string_date = '2012-04-01'

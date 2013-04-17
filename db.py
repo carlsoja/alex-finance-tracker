@@ -149,53 +149,61 @@ class Account(db.Model):
 	  except IndexError:
 	    return None
 	
+	# stubbed tests implemented
 	def GetAllTransfersOriginatingFromAccount(self):
 	  try:
-	    return self.transfers_origin.order('-date').fetch(100)
+	    return self.transfers_origin.order('-date')
 	  except IndexError:
 	    return None
 	
+	# stubbed tests implemented
 	def GetAllUnverifiedTransfersOriginatingFromAccount(self):
 	  try:
-	    return self.transfers_origin.filter('verified =', False).order('-date').fetch(100)
+	    return self.transfers_origin.filter('verified =', False).order('-date')
 	  except IndexError:
 	    return None
 	
+	# stubbed tests implemented
 	def GetAllVerifiedTransfersOriginatingFromAccount(self):
 	  try:
-	    return self.transfers_origin.filter('verified =', True).order('-date').fetch(100)
+	    return self.transfers_origin.filter('verified =', True).order('-date')
 	  except IndexError:
 	    return None
 	
+	# stubbed tests implemented
 	def GetAllVerifiedTransfersOriginatingFromAccountAfterDate(self, date):
 	  try:
 	    q = self.transfers_origin.filter('verified =', True)
-	    return q.filter('date >', DateFromString(date)).order('-date').fetch(100)
+	    return q.filter('date >', DateFromString(date)).order('-date')
 	  except IndexError:
 	    return None
 	
+	# stubbed tests implemented
 	def GetAllTransfersReceivedIntoAccount(self):
 	  try:
-	    return self.transfers_receiving.order('-date').fetch(100)
+	    return self.transfers_receiving.order('-date')
 	  except IndexError:
 	    return None
 	
+	# stubbed tests implemented
 	def GetAllUnverifiedTransfersReceivedIntoAccount(self):
 	  try:
-	    return self.transfers_receiving.filter('verified =', False).order('-date').fetch(100)
+	    return self.transfers_receiving.filter('verified =', False).order('-date')
 	  except IndexError:
 	    return None
 	
+	# stubbed tests implemented
 	def GetAllVerifiedTransfersReceivedIntoAccount(self):
 	  try:
-	    return self.transfers_receiving.filter('verified =', True).order('-date').fetch(100)
+	    return self.transfers_receiving.filter('verified =', True).order('-date')
 	  except IndexError:
 	    return None
 	
+	# stubbed tests implemented
 	def GetAllVerifiedTransfersReceivingIntoAccountAfterDate(self, date):
 	  try:
 	    q = self.transfers_receiving.filter('verified =', True)
-	    return q.filter('date >', DateFromString(date)).order('-date').fetch(100)
+	    return q.filter('date >', DateFromString(date)).order('-date')
 	  except IndexError:
 	    return None
 	
@@ -223,8 +231,10 @@ class Account(db.Model):
 	  
 	  return balance
 	
-	def GetRecentUnvTransactionBalanceList(self):
+	# stubbed tests implemented
+	def GetRecentUnvTransactionBalanceList(self, days=60):
 	  start_date = date.today()
+	  end_date = start_date - timedelta(days=days)
 	  current_date = start_date
 	  unv_balance = self.unv_balance
 	  
@@ -240,9 +250,9 @@ class Account(db.Model):
 	  d_index = 0
 	  if u_expenses.count() == 0: e_end = True
 	  else: e_end = False
-	  if len(u_origin_transfers) == 0: t_o_end = True
+	  if u_origin_transfers.count() == 0: t_o_end = True
 	  else: t_o_end = False
-	  if len(u_receiving_transfers) == 0: t_r_end = True
+	  if u_receiving_transfers.count() == 0: t_r_end = True
 	  else: t_r_end = False
 	  if u_deposits.count() == 0: d_end = True
 	  else: d_end = False
@@ -266,7 +276,7 @@ class Account(db.Model):
 	        unv_balance += u_origin_transfers[t_o_index].amount
 	        t_o_index += 1
 	        #logging.info('t_o_index: '+ str(t_o_index) + ', len: ' + str(len(u_origin_transfers)))
-	        if t_o_index == len(u_origin_transfers):
+	        if t_o_index == u_origin_transfers.count():
 	          t_o_end = True
 	        continue
 	    except IndexError:
@@ -277,7 +287,7 @@ class Account(db.Model):
 	        unv_balance -= u_receiving_transfers[t_r_index].amount
 	        t_r_index += 1
 	        #logging.info('t_r_index: '+ str(t_r_index) + ', len: ' + str(len(u_receiving_transfers)))
-	        if t_r_index == len(u_receiving_transfers):
+	        if t_r_index == u_receiving_transfers.count():
 	          t_r_end = True
 	        continue
 	    except IndexError:
@@ -294,8 +304,9 @@ class Account(db.Model):
 	    except IndexError:
 	      pass
 	    current_date -= timedelta(days=1)
-	  return (t_list, unv_balance)
+	  return t_list
 	
+	# stubbed tests implemented
 	def GetRecentVerTransactionBalanceList(self, days=60):
 	  start_date = date.today()
 	  end_date = start_date - timedelta(days=days)
@@ -348,7 +359,7 @@ class Account(db.Model):
 	    except IndexError:
 	      pass
 	    current_date -= timedelta(days=1)
-	  return (t_list, ver_balance)
+	  return t_list
 	
 	def GetPastBalances(self):
 	  return self.account_balances.order('-paycheck.date')
@@ -356,6 +367,7 @@ class Account(db.Model):
 	def GetAllBalancesAfterDate(self, date):
 	  return self.account_balances.filter('date >=', date).fetch(100)
 	
+	# stubbed tests implemented
 	def GetBalanceAdjustment(self, transaction):
 	  if transaction.__class__.__name__ == 'Expense' or (transaction.__class__.__name__ == 'Transfer' and transaction.receiving_account.key() != self.key()):
 	    if self.a_type == 'Credit Card':
@@ -369,6 +381,7 @@ class Account(db.Model):
 	      amount = transaction.amount
 	  return amount
 	
+	# stubbed tests implemented
 	def GetBalanceDifference(self, new_transaction, old_amount):
 	  if new_transaction.__class__.__name__ == 'Expense' or (new_transaction.__class__.__name__ == 'Transfer' and new_transaction.receiving_account.key() != self.key()):
 	    if self.a_type == 'Credit Card':
